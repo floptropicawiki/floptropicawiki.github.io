@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="en" data-theme="dark">
 
 <head>
     <meta charset="UTF-8">
@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300;400;500&display=swap" rel="stylesheet">
-    <link rel="icon" type="image/png" href="../flop-favicon.png">
+    <link rel="icon" type="image/png" href="flop-favicon.png">
 
     <style>
         * {
@@ -391,8 +391,8 @@
 <body>
     <header class="wiki-header">
         <div class="header-left">
-            <a href="../flop.html">
-                <img src="../flop-favicon.png" alt="Floptropica">
+            <a href="index.html">
+                <img src="flop-favicon.png" alt="Floptropica">
                 <h2>Floptropica Wiki</h2>
             </a>
         </div>
@@ -401,13 +401,12 @@
                 <input type="checkbox" id="themeToggle">
                 <span class="slider"></span>
             </label>
-            <div class="dark-mode-popup" id="darkModePopup">Of course you want dark mode you discord mod</div>
         </div>
     </header>
 
     <main class="main-content">
         <div class="breadcrumb">
-            <a href="../flop.html">Main Page</a> &rsaquo; Members
+            <a href="index.html">Main Page</a> &rsaquo; Members
         </div>
 
         <h1 class="wiki-title"><span class="icon">👥</span> Members</h1>
@@ -597,25 +596,14 @@
     </div>
 
     <footer class="wiki-footer">
-        <a href="../flop.html">&larr; Back to Main Page</a>
+        <a href="index.html">&larr; Back to Main Page</a>
     </footer>
 
     <script>
         const toggle = document.getElementById('themeToggle');
         const html = document.documentElement;
-        const popup = document.getElementById('darkModePopup');
 
-        // Check if this is a reload or a navigation
-        const navEntry = performance.getEntriesByType('navigation')[0];
-        const isReload = navEntry && navEntry.type === 'reload';
-
-        // Reset on reload, otherwise load from sessionStorage
-        if (isReload) {
-            sessionStorage.removeItem('floptropica-theme');
-            sessionStorage.removeItem('floptropica-popup-shown');
-        }
-
-        const savedTheme = sessionStorage.getItem('floptropica-theme') || 'light';
+        const savedTheme = sessionStorage.getItem('floptropica-theme') || 'dark';
         html.setAttribute('data-theme', savedTheme);
         toggle.checked = savedTheme === 'dark';
 
@@ -623,15 +611,6 @@
             const theme = toggle.checked ? 'dark' : 'light';
             html.setAttribute('data-theme', theme);
             sessionStorage.setItem('floptropica-theme', theme);
-
-            // Show popup when dark mode is activated
-            if (theme === 'dark' && !sessionStorage.getItem('floptropica-popup-shown')) {
-                sessionStorage.setItem('floptropica-popup-shown', 'true');
-                popup.classList.add('show');
-                setTimeout(() => {
-                    popup.classList.remove('show');
-                }, 5000);
-            }
         });
 
         // Lightbox functionality
