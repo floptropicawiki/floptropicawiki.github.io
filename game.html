@@ -140,10 +140,12 @@
             function drawAttack(attack) {
                 const image = images[attack.image], rect = beamRect(attack), pulse = .5 + Math.sin(performance.now() / 55) * .35;
                 if (attack.phase === 'warning') {
-                    ctx.save(); ctx.globalAlpha = pulse; ctx.fillStyle = '#ff214f';
-                    if (attack.horizontal) ctx.fillRect(attack.side === 'left' ? arena.x - 58 : arena.x + arena.w + 10, rect.y, 48, rect.h);
-                    else ctx.fillRect(rect.x, attack.side === 'top' ? arena.y - 58 : arena.y + arena.h + 10, rect.w, 48);
-                    const marker = attack.horizontal ? {x: attack.side === 'left' ? arena.x - 54 : arena.x + arena.w + 14, y: attack.center - 20, w: 40, h: 40} : {x: attack.center - 20, y: attack.side === 'top' ? arena.y - 54 : arena.y + arena.h + 14, w: 40, h: 40};
+                    ctx.save(); ctx.fillStyle = '#ff214f';
+                    ctx.globalAlpha = .1 + pulse * .18; ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
+                    ctx.globalAlpha = .65 + pulse * .35;
+                    if (attack.horizontal) ctx.fillRect(attack.side === 'left' ? arena.x + 5 : arena.x + arena.w - 53, rect.y, 48, rect.h);
+                    else ctx.fillRect(rect.x, attack.side === 'top' ? arena.y + 5 : arena.y + arena.h - 53, rect.w, 48);
+                    const marker = attack.horizontal ? {x: attack.side === 'left' ? arena.x + 9 : arena.x + arena.w - 49, y: attack.center - 20, w: 40, h: 40} : {x: attack.center - 20, y: attack.side === 'top' ? arena.y + 9 : arena.y + arena.h - 49, w: 40, h: 40};
                     drawImage(image, marker); ctx.restore(); return;
                 }
                 ctx.save(); ctx.beginPath(); ctx.rect(rect.x, rect.y, rect.w, rect.h); ctx.clip();
