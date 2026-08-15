@@ -86,20 +86,23 @@
             }
             function resetPlayer() { player = {x: 420, y: 520, w: 58, h: 58, speed: 290, invulnerable: 1.4}; shots = []; enemyShots = []; particles = []; shotCooldown = 0; }
             function spawnLevel() {
-                invaders = []; const columns = Math.min(8, 5 + level); const rows = Math.min(4, 2 + Math.floor(level / 2));
-                const gapX = 78, gapY = 70, startX = (canvas.width - (columns - 1) * gapX - 54) / 2;
+                invaders = []; const columns = Math.min(9, 6 + level); const rows = Math.min(5, 3 + Math.floor(level / 2));
+                const gapX = 72, gapY = 64, startX = (canvas.width - (columns - 1) * gapX - 54) / 2;
                 for (let row = 0; row < rows; row++) for (let col = 0; col < columns; col++) {
                     invaders.push({x: startX + col * gapX, y: 55 + row * gapY, w: 54, h: 54, image: 1 + ((row + col) % 5), points: (rows - row) * 25});
                 }
-                formationDirection = 1; formationSpeed = 25 + level * 8; enemyFireTimer = 1.2;
+                formationDirection = 1; formationSpeed = 48 + level * 12; enemyFireTimer = .65;
             }
             function updateHud() { ui.score.textContent = score; ui.level.textContent = level; ui.lives.textContent = lives; ui.high.textContent = highScore; }
             function overlaps(a, b) { return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y; }
             function fire() { if (state !== 'playing' || shotCooldown > 0) return; shots.push({x: player.x + player.w / 2 - 3, y: player.y - 13, w: 6, h: 18}); shotCooldown = .2; }
             function enemyFire() {
                 if (!invaders.length) return; const shooters = invaders.filter(inv => !invaders.some(other => Math.abs(other.x - inv.x) < 20 && other.y > inv.y));
-                const inv = shooters[Math.floor(Math.random() * shooters.length)] || invaders[0];
-                enemyShots.push({x: inv.x + inv.w / 2 - 4, y: inv.y + inv.h, w: 8, h: 18});
+                const shotCount = Math.min(3, 1 + (Math.random() < .4 + level * .06 ? 1 : 0) + (level >= 4 && Math.random() < .3 ? 1 : 0));
+                for (let i = 0; i < shotCount; i++) {
+                    const inv = shooters[Math.floor(Math.random() * shooters.length)] || invaders[0];
+                    enemyShots.push({x: inv.x + inv.w / 2 - 15, y: inv.y + inv.h, w: 30, h: 30, image: inv.image, drift: (Math.random() - .5) * (35 + level * 5)});
+                }
             }
             function burst(x, y, color) { for (let i = 0; i < 14; i++) particles.push({x, y, vx: (Math.random() - .5) * 180, vy: (Math.random() - .5) * 180, life: .55, color}); }
             function hitPlayer() {
@@ -125,13 +128,13 @@
                 player.y = Math.max(300, Math.min(canvas.height - player.h - 8, player.y + dy * player.speed * dt));
                 if (keys.has('Space')) fire();
                 shotCooldown -= dt; player.invulnerable -= dt;
-                shots.forEach(s => s.y -= 510 * dt); enemyShots.forEach(s => s.y += (230 + level * 12) * dt);
+                shots.forEach(s => s.y -= 510 * dt); enemyShots.forEach(s => { s.y += (300 + level * 18) * dt; s.x += s.drift * dt; });
                 shots = shots.filter(s => s.y + s.h > 0); enemyShots = enemyShots.filter(s => s.y < canvas.height);
 
                 let edge = false;
                 invaders.forEach(inv => { inv.x += formationDirection * formationSpeed * dt; if (inv.x < 12 || inv.x + inv.w > canvas.width - 12) edge = true; });
                 if (edge) { formationDirection *= -1; invaders.forEach(inv => { inv.x += formationDirection * formationSpeed * dt * 2; inv.y += 20; }); }
-                enemyFireTimer -= dt; if (enemyFireTimer <= 0) { enemyFire(); enemyFireTimer = Math.max(.28, 1.15 - level * .07) * (.7 + Math.random() * .7); }
+                enemyFireTimer -= dt; if (enemyFireTimer <= 0) { enemyFire(); enemyFireTimer = Math.max(.16, .7 - level * .045) * (.65 + Math.random() * .55); }
 
                 shots.forEach(shot => invaders.forEach(inv => {
                     if (!shot.dead && !inv.dead && overlaps(shot, inv)) { shot.dead = inv.dead = true; score += inv.points; burst(inv.x + inv.w / 2, inv.y + inv.h / 2, '#ffcb47'); }
@@ -152,7 +155,12 @@
                 invaders.forEach(inv => drawImage(images[inv.image], inv));
                 if (state !== 'gameover' || lives > 0) { ctx.globalAlpha = player.invulnerable > 0 && Math.floor(player.invulnerable * 10) % 2 ? .3 : 1; drawImage(images[0], player); ctx.globalAlpha = 1; }
                 ctx.fillStyle = '#72e6ff'; shots.forEach(s => ctx.fillRect(s.x, s.y, s.w, s.h));
-                ctx.fillStyle = '#ff526e'; enemyShots.forEach(s => ctx.fillRect(s.x, s.y, s.w, s.h));
+                enemyShots.forEach(s => {
+                    const gradient = ctx.createLinearGradient(s.x + s.w / 2, s.y - 24, s.x + s.w / 2, s.y + s.h);
+                    gradient.addColorStop(0, 'rgba(255,30,65,0)'); gradient.addColorStop(1, 'rgba(255,50,85,.9)');
+                    ctx.fillStyle = gradient; ctx.fillRect(s.x + s.w / 2 - 3, s.y - 24, 6, s.h + 24);
+                    ctx.shadowColor = '#ff284f'; ctx.shadowBlur = 14; drawImage(images[s.image], s); ctx.shadowBlur = 0;
+                });
                 particles.forEach(p => { ctx.globalAlpha = Math.max(0, p.life * 2); ctx.fillStyle = p.color; ctx.fillRect(p.x, p.y, 5, 5); }); ctx.globalAlpha = 1;
                 if (state === 'paused' || state === 'gameover') {
                     ctx.fillStyle = 'rgba(0,0,0,.72)'; ctx.fillRect(0, 0, canvas.width, canvas.height);
