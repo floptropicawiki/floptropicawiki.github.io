@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flop Invaders - Floptropica Wiki</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300;400;500&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/png" href="flop-favicon.png">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        :root { --bg: #101018; --panel: #1c1c29; --text: #eee; --muted: #a8a8b8; --accent: #7eb8ff; --border: #39394b; }
+        [data-theme="light"] { --bg: #eef4f0; --panel: #fff; --text: #171717; --muted: #58615c; --accent: #059669; --border: #d5ded8; }
+        body { min-height: 100vh; background: var(--bg); color: var(--text); font-family: 'Fredoka', sans-serif; }
+        .wiki-header { background: var(--panel); border-bottom: 3px solid var(--accent); padding: 12px 24px; display: flex; align-items: center; justify-content: space-between; }
+        .wiki-header a { display: flex; align-items: center; gap: 12px; color: var(--accent); text-decoration: none; }
+        .wiki-header img { width: 46px; height: 46px; border-radius: 6px; }
+        .theme-button { border: 1px solid var(--border); border-radius: 999px; background: var(--bg); color: var(--text); padding: 8px 13px; cursor: pointer; font: inherit; }
+        main { width: min(960px, 100%); margin: 0 auto; padding: 26px 16px 50px; }
+        .breadcrumb { color: var(--muted); margin-bottom: 14px; font-size: .9rem; }
+        .breadcrumb a { color: var(--accent); text-decoration: none; }
+        h1 { font-size: clamp(2rem, 5vw, 3rem); margin-bottom: 6px; }
+        .instructions { color: var(--muted); margin-bottom: 18px; line-height: 1.5; }
+        .game-shell { overflow: hidden; border: 2px solid var(--accent); border-radius: 12px; background: #03030b; box-shadow: 0 12px 35px rgba(0,0,0,.35); }
+        .hud { display: flex; justify-content: space-between; gap: 10px; padding: 11px 16px; background: #121222; color: #fff; font-weight: 500; }
+        canvas { display: block; width: 100%; height: auto; aspect-ratio: 3 / 2; background: #050510; touch-action: none; }
+        .controls { display: grid; grid-template-columns: repeat(3, 58px) 1fr 88px; gap: 8px; align-items: center; padding: 12px; background: #121222; }
+        .control { min-height: 48px; border: 1px solid #52526a; border-radius: 9px; background: #24243a; color: white; font: 500 1.1rem 'Fredoka', sans-serif; cursor: pointer; user-select: none; touch-action: none; }
+        .control:active, .control.active { background: var(--accent); color: #111; }
+        .up { grid-column: 2; grid-row: 1; } .left { grid-column: 1; grid-row: 2; } .down { grid-column: 2; grid-row: 2; } .right { grid-column: 3; grid-row: 2; }
+        .fire { grid-column: 5; grid-row: 1 / 3; height: 100%; background: #9e2638; border-color: #e15d72; }
+        .pause { grid-column: 4; grid-row: 1 / 3; justify-self: end; padding: 0 20px; }
+        .game-actions { text-align: center; margin-top: 18px; }
+        .restart { display: none; border: 0; border-radius: 8px; background: var(--accent); color: #111; padding: 11px 20px; font: 500 1rem 'Fredoka', sans-serif; cursor: pointer; }
+        .restart.show { display: inline-block; }
+        footer { text-align: center; border-top: 1px solid var(--border); padding: 25px; color: var(--muted); }
+        footer a { color: var(--accent); text-decoration: none; }
+        @media (min-width: 760px) { .controls { display: none; } }
+        @media (max-width: 520px) { .wiki-header h2 { font-size: 1.1rem; } .hud { font-size: .85rem; padding: 9px; } main { padding-inline: 8px; } }
+    </style>
+</head>
+<body>
+    <header class="wiki-header">
+        <a href="index.html"><img src="flop-favicon.png" alt="Floptropica"><h2>Floptropica Wiki</h2></a>
+        <button class="theme-button" id="themeButton" type="button" aria-label="Toggle color theme">☀️ / 🌙</button>
+    </header>
+    <main>
+        <div class="breadcrumb"><a href="index.html">Main Page</a> &rsaquo; Flop Invaders</div>
+        <h1>🛸 Flop Invaders</h1>
+        <p class="instructions">Move with the arrow keys or WASD. Press Space to fire, P to pause, and Enter to restart. Stop the invaders before they reach you.</p>
+        <section class="game-shell" aria-label="Flop Invaders game">
+            <div class="hud"><span>Score: <b id="score">0</b></span><span>Level: <b id="level">1</b></span><span>Lives: <b id="lives">3</b></span><span>High: <b id="highScore">0</b></span></div>
+            <canvas id="game" width="900" height="600" tabindex="0" aria-label="Use arrow keys to move and Space to shoot"></canvas>
+            <div class="controls" aria-label="Touch controls">
+                <button class="control up" data-key="ArrowUp" aria-label="Move up">▲</button>
+                <button class="control left" data-key="ArrowLeft" aria-label="Move left">◀</button>
+                <button class="control down" data-key="ArrowDown" aria-label="Move down">▼</button>
+                <button class="control right" data-key="ArrowRight" aria-label="Move right">▶</button>
+                <button class="control pause" id="pauseButton" aria-label="Pause game">Pause</button>
+                <button class="control fire" data-key="Space" aria-label="Fire">Fire</button>
+            </div>
+        </section>
+        <div class="game-actions"><button class="restart" id="restartButton" type="button">Play Again</button></div>
+    </main>
+    <footer><a href="index.html">&larr; Back to Main Page</a></footer>
+    <script>
+        (() => {
+            'use strict';
+            const canvas = document.getElementById('game');
+            const ctx = canvas.getContext('2d');
+            const ui = {
+                score: document.getElementById('score'), level: document.getElementById('level'),
+                lives: document.getElementById('lives'), high: document.getElementById('highScore'),
+                restart: document.getElementById('restartButton'), pause: document.getElementById('pauseButton')
+            };
+            const imageFiles = ['floppfp.png', 'invader1.png', 'invader2.png', 'invader3.png', 'invader4.png'];
+            const images = imageFiles.map(src => { const image = new Image(); image.src = src; return image; });
+            const keys = new Set();
+            const stars = Array.from({length: 85}, () => ({x: Math.random() * canvas.width, y: Math.random() * canvas.height, r: Math.random() * 1.7 + .3, s: Math.random() * 18 + 8}));
+            let player, invaders, shots, enemyShots, particles, score, level, lives, highScore, state, formationDirection, formationSpeed, enemyFireTimer, lastTime, shotCooldown;
+
+            function resetGame() {
+                score = 0; level = 1; lives = 3; highScore = Number(localStorage.getItem('flop-invaders-high') || 0);
+                state = 'playing'; ui.restart.classList.remove('show'); spawnLevel(); resetPlayer(); updateHud(); canvas.focus();
+            }
+            function resetPlayer() { player = {x: 420, y: 520, w: 58, h: 58, speed: 290, invulnerable: 1.4}; shots = []; enemyShots = []; particles = []; shotCooldown = 0; }
+            function spawnLevel() {
+                invaders = []; const columns = Math.min(8, 5 + level); const rows = Math.min(4, 2 + Math.floor(level / 2));
+                const gapX = 78, gapY = 70, startX = (canvas.width - (columns - 1) * gapX - 54) / 2;
+                for (let row = 0; row < rows; row++) for (let col = 0; col < columns; col++) {
+                    invaders.push({x: startX + col * gapX, y: 55 + row * gapY, w: 54, h: 54, image: 1 + ((row + col) % 4), points: (rows - row) * 25});
+                }
+                formationDirection = 1; formationSpeed = 25 + level * 8; enemyFireTimer = 1.2;
+            }
+            function updateHud() { ui.score.textContent = score; ui.level.textContent = level; ui.lives.textContent = lives; ui.high.textContent = highScore; }
+            function overlaps(a, b) { return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y; }
+            function fire() { if (state !== 'playing' || shotCooldown > 0) return; shots.push({x: player.x + player.w / 2 - 3, y: player.y - 13, w: 6, h: 18}); shotCooldown = .2; }
+            function enemyFire() {
+                if (!invaders.length) return; const shooters = invaders.filter(inv => !invaders.some(other => Math.abs(other.x - inv.x) < 20 && other.y > inv.y));
+                const inv = shooters[Math.floor(Math.random() * shooters.length)] || invaders[0];
+                enemyShots.push({x: inv.x + inv.w / 2 - 4, y: inv.y + inv.h, w: 8, h: 18});
+            }
+            function burst(x, y, color) { for (let i = 0; i < 14; i++) particles.push({x, y, vx: (Math.random() - .5) * 180, vy: (Math.random() - .5) * 180, life: .55, color}); }
+            function hitPlayer() {
+                if (player.invulnerable > 0) return; lives--; burst(player.x + player.w / 2, player.y + player.h / 2, '#7eb8ff'); updateHud();
+                if (lives <= 0) endGame(); else { player.x = 420; player.y = 520; player.invulnerable = 1.8; enemyShots = []; }
+            }
+            function endGame() {
+                state = 'gameover'; if (score > highScore) { highScore = score; localStorage.setItem('flop-invaders-high', String(score)); updateHud(); }
+                ui.restart.classList.add('show');
+            }
+            function togglePause() { if (state === 'playing') state = 'paused'; else if (state === 'paused') state = 'playing'; ui.pause.textContent = state === 'paused' ? 'Resume' : 'Pause'; }
+
+            function update(dt) {
+                stars.forEach(star => { star.y += star.s * dt; if (star.y > canvas.height) { star.y = 0; star.x = Math.random() * canvas.width; } });
+                if (state !== 'playing') return;
+                let dx = 0, dy = 0;
+                if (keys.has('ArrowLeft') || keys.has('KeyA')) dx--;
+                if (keys.has('ArrowRight') || keys.has('KeyD')) dx++;
+                if (keys.has('ArrowUp') || keys.has('KeyW')) dy--;
+                if (keys.has('ArrowDown') || keys.has('KeyS')) dy++;
+                if (dx && dy) { dx *= .707; dy *= .707; }
+                player.x = Math.max(0, Math.min(canvas.width - player.w, player.x + dx * player.speed * dt));
+                player.y = Math.max(300, Math.min(canvas.height - player.h - 8, player.y + dy * player.speed * dt));
+                if (keys.has('Space')) fire();
+                shotCooldown -= dt; player.invulnerable -= dt;
+                shots.forEach(s => s.y -= 510 * dt); enemyShots.forEach(s => s.y += (230 + level * 12) * dt);
+                shots = shots.filter(s => s.y + s.h > 0); enemyShots = enemyShots.filter(s => s.y < canvas.height);
+
+                let edge = false;
+                invaders.forEach(inv => { inv.x += formationDirection * formationSpeed * dt; if (inv.x < 12 || inv.x + inv.w > canvas.width - 12) edge = true; });
+                if (edge) { formationDirection *= -1; invaders.forEach(inv => { inv.x += formationDirection * formationSpeed * dt * 2; inv.y += 20; }); }
+                enemyFireTimer -= dt; if (enemyFireTimer <= 0) { enemyFire(); enemyFireTimer = Math.max(.28, 1.15 - level * .07) * (.7 + Math.random() * .7); }
+
+                shots.forEach(shot => invaders.forEach(inv => {
+                    if (!shot.dead && !inv.dead && overlaps(shot, inv)) { shot.dead = inv.dead = true; score += inv.points; burst(inv.x + inv.w / 2, inv.y + inv.h / 2, '#ffcb47'); }
+                }));
+                shots = shots.filter(s => !s.dead); invaders = invaders.filter(inv => !inv.dead);
+                enemyShots.forEach(shot => { if (!shot.dead && overlaps(shot, player)) { shot.dead = true; hitPlayer(); } });
+                enemyShots = enemyShots.filter(s => !s.dead);
+                if (invaders.some(inv => inv.y + inv.h >= player.y || overlaps(inv, player))) endGame();
+                if (!invaders.length) { score += 500 * level; level++; spawnLevel(); enemyShots = []; updateHud(); }
+                particles.forEach(p => { p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt; }); particles = particles.filter(p => p.life > 0);
+                if (score > highScore) highScore = score; updateHud();
+            }
+
+            function drawImage(image, object) { if (image.complete && image.naturalWidth) ctx.drawImage(image, object.x, object.y, object.w, object.h); else { ctx.fillStyle = '#7eb8ff'; ctx.fillRect(object.x, object.y, object.w, object.h); } }
+            function render() {
+                ctx.fillStyle = '#050510'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#fff'; stars.forEach(s => { ctx.globalAlpha = .35 + s.r / 3; ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2); ctx.fill(); }); ctx.globalAlpha = 1;
+                invaders.forEach(inv => drawImage(images[inv.image], inv));
+                if (state !== 'gameover' || lives > 0) { ctx.globalAlpha = player.invulnerable > 0 && Math.floor(player.invulnerable * 10) % 2 ? .3 : 1; drawImage(images[0], player); ctx.globalAlpha = 1; }
+                ctx.fillStyle = '#72e6ff'; shots.forEach(s => ctx.fillRect(s.x, s.y, s.w, s.h));
+                ctx.fillStyle = '#ff526e'; enemyShots.forEach(s => ctx.fillRect(s.x, s.y, s.w, s.h));
+                particles.forEach(p => { ctx.globalAlpha = Math.max(0, p.life * 2); ctx.fillStyle = p.color; ctx.fillRect(p.x, p.y, 5, 5); }); ctx.globalAlpha = 1;
+                if (state === 'paused' || state === 'gameover') {
+                    ctx.fillStyle = 'rgba(0,0,0,.72)'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.font = "500 58px Fredoka, sans-serif"; ctx.fillText(state === 'paused' ? 'PAUSED' : 'GAME OVER', canvas.width / 2, 265);
+                    ctx.font = "400 25px Fredoka, sans-serif"; ctx.fillText(state === 'paused' ? 'Press P to resume' : 'Press Enter to play again', canvas.width / 2, 310);
+                }
+            }
+            function loop(time) { const dt = Math.min(.033, ((time - lastTime) || 0) / 1000); lastTime = time; update(dt); render(); requestAnimationFrame(loop); }
+
+            window.addEventListener('keydown', event => {
+                if (['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Space'].includes(event.code)) event.preventDefault();
+                if (event.code === 'KeyP' && !event.repeat) togglePause();
+                else if (event.code === 'Enter' && state === 'gameover') resetGame();
+                else keys.add(event.code);
+            });
+            window.addEventListener('keyup', event => keys.delete(event.code));
+            window.addEventListener('blur', () => { keys.clear(); if (state === 'playing') togglePause(); });
+            document.querySelectorAll('[data-key]').forEach(button => {
+                const code = button.dataset.key;
+                const press = event => { event.preventDefault(); keys.add(code); button.classList.add('active'); if (code === 'Space') fire(); canvas.focus(); };
+                const release = event => { event.preventDefault(); keys.delete(code); button.classList.remove('active'); };
+                button.addEventListener('pointerdown', press); button.addEventListener('pointerup', release); button.addEventListener('pointercancel', release); button.addEventListener('pointerleave', release);
+            });
+            ui.pause.addEventListener('click', togglePause); ui.restart.addEventListener('click', resetGame);
+            document.getElementById('themeButton').addEventListener('click', () => {
+                const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'; document.documentElement.dataset.theme = next; sessionStorage.setItem('floptropica-theme', next);
+            });
+            document.documentElement.dataset.theme = sessionStorage.getItem('floptropica-theme') || 'dark';
+            resetGame(); requestAnimationFrame(loop);
+        })();
+    </script>
+</body>
+</html>
