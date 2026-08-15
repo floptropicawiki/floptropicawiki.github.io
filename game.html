@@ -50,7 +50,7 @@
         <h1>❤️ Flop Boss Fight</h1>
         <p class="instructions">Survive each level inside the battle box. Side panels flash before icon beams fire. Move with the arrow keys or WASD, press Space to dash through danger, and press P to pause.</p>
         <section class="game-shell" aria-label="Flop Boss Fight game">
-            <div class="hud"><span>Score: <b id="score">0</b></span><span>Level: <b id="level">1</b></span><span>HP: <b id="lives">5</b></span><span>High: <b id="highScore">0</b></span></div>
+            <div class="hud"><span>Score: <b id="score">0</b></span><span>Level: <b id="level">1</b></span><span>HP: <b id="lives">3</b></span><span>High: <b id="highScore">0</b></span></div>
             <canvas id="game" width="900" height="600" tabindex="0" aria-label="Use arrow keys to move and Space to dash"></canvas>
             <div class="controls" aria-label="Touch controls">
                 <button class="control up" data-key="ArrowUp" aria-label="Move up">▲</button>
@@ -76,7 +76,7 @@
             let player, attacks, particles, level, hp, score, highScore, levelTime, levelDuration, attackTimer, intermission, state, lastTime;
 
             function resetGame() {
-                level = 1; hp = 5; score = 0; highScore = Number(localStorage.getItem('flop-boss-high') || 0);
+                level = 1; hp = 3; score = 0; highScore = Number(localStorage.getItem('flop-boss-high') || 0);
                 player = {x: 423, y: 425, w: 44, h: 44, speed: 255, invulnerable: 1.2, dash: 0, dashCooldown: 0};
                 attacks = []; particles = []; state = 'playing'; intermission = 0; ui.restart.classList.remove('show'); startLevel(); canvas.focus();
             }
@@ -132,7 +132,7 @@
                 });
                 attacks = attacks.filter(attack => !attack.dead);
                 particles.forEach(p => { p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt; }); particles = particles.filter(p => p.life > 0);
-                if (levelTime >= levelDuration) { score += level * 750; level++; hp = Math.min(5, hp + 1); attacks = []; state = 'intermission'; intermission = 2.4; updateHud(); }
+                if (levelTime >= levelDuration) { score += level * 750; level++; hp = Math.min(3, hp + 1); attacks = []; state = 'intermission'; intermission = 2.4; updateHud(); }
                 if (score > highScore) highScore = Math.floor(score); updateHud();
             }
 
@@ -140,9 +140,7 @@
             function drawAttack(attack) {
                 const image = images[attack.image], rect = beamRect(attack), pulse = .5 + Math.sin(performance.now() / 55) * .35;
                 if (attack.phase === 'warning') {
-                    ctx.save(); ctx.fillStyle = '#ff214f';
-                    ctx.globalAlpha = .1 + pulse * .18; ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
-                    ctx.globalAlpha = .65 + pulse * .35;
+                    ctx.save(); ctx.fillStyle = '#ff214f'; ctx.globalAlpha = .65 + pulse * .35;
                     if (attack.horizontal) ctx.fillRect(attack.side === 'left' ? arena.x + 5 : arena.x + arena.w - 53, rect.y, 48, rect.h);
                     else ctx.fillRect(rect.x, attack.side === 'top' ? arena.y + 5 : arena.y + arena.h - 53, rect.w, 48);
                     const marker = attack.horizontal ? {x: attack.side === 'left' ? arena.x + 9 : arena.x + arena.w - 49, y: attack.center - 20, w: 40, h: 40} : {x: attack.center - 20, y: attack.side === 'top' ? arena.y + 9 : arena.y + arena.h - 49, w: 40, h: 40};
