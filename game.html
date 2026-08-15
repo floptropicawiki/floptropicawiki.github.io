@@ -74,7 +74,7 @@
                 lives: document.getElementById('lives'), high: document.getElementById('highScore'),
                 restart: document.getElementById('restartButton'), pause: document.getElementById('pauseButton')
             };
-            const imageFiles = ['floppfp.png', 'invader1.png', 'invader2.png', 'invader3.png', 'invader4.png'];
+            const imageFiles = ['floppfp.png', 'invader1.png', 'invader2.png', 'invader3.png', 'invader4.png', 'invader5.png'];
             const images = imageFiles.map(src => { const image = new Image(); image.src = src; return image; });
             const keys = new Set();
             const stars = Array.from({length: 85}, () => ({x: Math.random() * canvas.width, y: Math.random() * canvas.height, r: Math.random() * 1.7 + .3, s: Math.random() * 18 + 8}));
@@ -89,7 +89,7 @@
                 invaders = []; const columns = Math.min(8, 5 + level); const rows = Math.min(4, 2 + Math.floor(level / 2));
                 const gapX = 78, gapY = 70, startX = (canvas.width - (columns - 1) * gapX - 54) / 2;
                 for (let row = 0; row < rows; row++) for (let col = 0; col < columns; col++) {
-                    invaders.push({x: startX + col * gapX, y: 55 + row * gapY, w: 54, h: 54, image: 1 + ((row + col) % 4), points: (rows - row) * 25});
+                    invaders.push({x: startX + col * gapX, y: 55 + row * gapY, w: 54, h: 54, image: 1 + ((row + col) % 5), points: (rows - row) * 25});
                 }
                 formationDirection = 1; formationSpeed = 25 + level * 8; enemyFireTimer = 1.2;
             }
