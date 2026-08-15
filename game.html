@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Flop Invaders - Floptropica Wiki</title>
+    <title>Flop Boss Fight - Floptropica Wiki</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300;400;500&display=swap" rel="stylesheet">
@@ -46,19 +46,19 @@
         <button class="theme-button" id="themeButton" type="button" aria-label="Toggle color theme">☀️ / 🌙</button>
     </header>
     <main>
-        <div class="breadcrumb"><a href="index.html">Main Page</a> &rsaquo; Flop Invaders</div>
-        <h1>🛸 Flop Invaders</h1>
-        <p class="instructions">Move with the arrow keys or WASD. Press Space to fire, P to pause, and Enter to restart. Stop the invaders before they reach you.</p>
-        <section class="game-shell" aria-label="Flop Invaders game">
-            <div class="hud"><span>Score: <b id="score">0</b></span><span>Level: <b id="level">1</b></span><span>Lives: <b id="lives">3</b></span><span>High: <b id="highScore">0</b></span></div>
-            <canvas id="game" width="900" height="600" tabindex="0" aria-label="Use arrow keys to move and Space to shoot"></canvas>
+        <div class="breadcrumb"><a href="index.html">Main Page</a> &rsaquo; Flop Boss Fight</div>
+        <h1>❤️ Flop Boss Fight</h1>
+        <p class="instructions">Survive each level inside the battle box. Side panels flash before icon beams fire. Move with the arrow keys or WASD, press Space to dash through danger, and press P to pause.</p>
+        <section class="game-shell" aria-label="Flop Boss Fight game">
+            <div class="hud"><span>Score: <b id="score">0</b></span><span>Level: <b id="level">1</b></span><span>HP: <b id="lives">5</b></span><span>High: <b id="highScore">0</b></span></div>
+            <canvas id="game" width="900" height="600" tabindex="0" aria-label="Use arrow keys to move and Space to dash"></canvas>
             <div class="controls" aria-label="Touch controls">
                 <button class="control up" data-key="ArrowUp" aria-label="Move up">▲</button>
                 <button class="control left" data-key="ArrowLeft" aria-label="Move left">◀</button>
                 <button class="control down" data-key="ArrowDown" aria-label="Move down">▼</button>
                 <button class="control right" data-key="ArrowRight" aria-label="Move right">▶</button>
                 <button class="control pause" id="pauseButton" aria-label="Pause game">Pause</button>
-                <button class="control fire" data-key="Space" aria-label="Fire">Fire</button>
+                <button class="control fire" data-key="Space" aria-label="Dash">Dash</button>
             </div>
         </section>
         <div class="game-actions"><button class="restart" id="restartButton" type="button">Play Again</button></div>
@@ -67,130 +67,123 @@
     <script>
         (() => {
             'use strict';
-            const canvas = document.getElementById('game');
-            const ctx = canvas.getContext('2d');
-            const ui = {
-                score: document.getElementById('score'), level: document.getElementById('level'),
-                lives: document.getElementById('lives'), high: document.getElementById('highScore'),
-                restart: document.getElementById('restartButton'), pause: document.getElementById('pauseButton')
-            };
+            const canvas = document.getElementById('game'), ctx = canvas.getContext('2d');
+            const ui = { score: document.getElementById('score'), level: document.getElementById('level'), lives: document.getElementById('lives'), high: document.getElementById('highScore'), restart: document.getElementById('restartButton'), pause: document.getElementById('pauseButton') };
+            const arena = {x: 145, y: 105, w: 610, h: 405};
             const imageFiles = ['floppfp.png', 'invader1.png', 'invader2.png', 'invader3.png', 'invader4.png', 'invader5.png'];
             const images = imageFiles.map(src => { const image = new Image(); image.src = src; return image; });
-            const keys = new Set();
-            const stars = Array.from({length: 85}, () => ({x: Math.random() * canvas.width, y: Math.random() * canvas.height, r: Math.random() * 1.7 + .3, s: Math.random() * 18 + 8}));
-            let player, invaders, shots, enemyShots, particles, score, level, lives, highScore, state, formationDirection, formationSpeed, enemyFireTimer, lastTime, shotCooldown;
+            const keys = new Set(), stars = Array.from({length: 90}, () => ({x: Math.random() * 900, y: Math.random() * 600, r: Math.random() * 1.8 + .2}));
+            let player, attacks, particles, level, hp, score, highScore, levelTime, levelDuration, attackTimer, intermission, state, lastTime;
 
             function resetGame() {
-                score = 0; level = 1; lives = 3; highScore = Number(localStorage.getItem('flop-invaders-high') || 0);
-                state = 'playing'; ui.restart.classList.remove('show'); spawnLevel(); resetPlayer(); updateHud(); canvas.focus();
+                level = 1; hp = 5; score = 0; highScore = Number(localStorage.getItem('flop-boss-high') || 0);
+                player = {x: 423, y: 425, w: 44, h: 44, speed: 255, invulnerable: 1.2, dash: 0, dashCooldown: 0};
+                attacks = []; particles = []; state = 'playing'; intermission = 0; ui.restart.classList.remove('show'); startLevel(); canvas.focus();
             }
-            function resetPlayer() { player = {x: 420, y: 520, w: 58, h: 58, speed: 255, invulnerable: .8}; shots = []; enemyShots = []; particles = []; shotCooldown = 0; }
-            function spawnLevel() {
-                invaders = []; const columns = Math.min(10, 7 + level); const rows = Math.min(6, 4 + Math.floor(level / 2));
-                const gapX = 68, gapY = 60, startX = (canvas.width - (columns - 1) * gapX - 50) / 2;
-                for (let row = 0; row < rows; row++) for (let col = 0; col < columns; col++) {
-                    invaders.push({x: startX + col * gapX, y: 40 + row * gapY, w: 50, h: 50, image: 1 + ((row + col) % 5), points: (rows - row) * 25});
+            function startLevel() { levelTime = 0; levelDuration = 15 + Math.min(12, level * 1.5); attackTimer = 1.2; attacks = []; updateHud(); }
+            function updateHud() { ui.score.textContent = Math.floor(score); ui.level.textContent = level; ui.lives.textContent = '♥'.repeat(hp) || '0'; ui.high.textContent = highScore; }
+            function rectsOverlap(a, b) { return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y; }
+            function imageIndex() { return 1 + Math.floor(Math.random() * 5); }
+            function makeAttack(side, aimed, offset = 0) {
+                const horizontal = side === 'left' || side === 'right';
+                const beamSize = Math.min(78, 42 + level * 3);
+                const center = aimed ? (horizontal ? player.y + player.h / 2 : player.x + player.w / 2) : (horizontal ? arena.y + 45 + Math.random() * (arena.h - 90) : arena.x + 45 + Math.random() * (arena.w - 90));
+                return {side, horizontal, center: Math.max(horizontal ? arena.y + beamSize / 2 : arena.x + beamSize / 2, Math.min(horizontal ? arena.y + arena.h - beamSize / 2 : arena.x + arena.w - beamSize / 2, center + offset)), size: beamSize, image: imageIndex(), phase: 'warning', timer: Math.max(.38, 1.05 - level * .065), activeTime: Math.min(1.15, .55 + level * .045)};
+            }
+            function launchPattern() {
+                const sides = ['left', 'right', 'top', 'bottom'];
+                const primary = sides[Math.floor(Math.random() * sides.length)];
+                attacks.push(makeAttack(primary, level >= 2 && Math.random() < .55));
+                if (level >= 2 && Math.random() < .55) attacks.push(makeAttack(sides[(sides.indexOf(primary) + 2) % 4], false, (Math.random() - .5) * 180));
+                if (level >= 4 && Math.random() < .65) {
+                    const perpendicular = primary === 'left' || primary === 'right' ? (Math.random() < .5 ? 'top' : 'bottom') : (Math.random() < .5 ? 'left' : 'right');
+                    attacks.push(makeAttack(perpendicular, Math.random() < .6));
                 }
-                formationDirection = 1; formationSpeed = 78 + level * 18; enemyFireTimer = .3;
+                if (level >= 7) attacks.push(makeAttack(sides[Math.floor(Math.random() * 4)], false));
             }
-            function updateHud() { ui.score.textContent = score; ui.level.textContent = level; ui.lives.textContent = lives; ui.high.textContent = highScore; }
-            function overlaps(a, b) { return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y; }
-            function fire() { if (state !== 'playing' || shotCooldown > 0) return; shots.push({x: player.x + player.w / 2 - 3, y: player.y - 13, w: 6, h: 18}); shotCooldown = .28; }
-            function enemyFire() {
-                if (!invaders.length) return; const shooters = invaders.filter(inv => !invaders.some(other => Math.abs(other.x - inv.x) < 20 && other.y > inv.y));
-                const shotCount = Math.min(5, 3 + Math.floor(level / 2));
-                for (let i = 0; i < shotCount; i++) {
-                    const inv = shooters[Math.floor(Math.random() * shooters.length)] || invaders[0];
-                    const x = inv.x + inv.w / 2 - 18, y = inv.y + inv.h;
-                    const aimX = player.x + player.w / 2 - (x + 18) + (Math.random() - .5) * 90;
-                    const aimY = player.y + player.h / 2 - (y + 18);
-                    const distance = Math.hypot(aimX, aimY) || 1, speed = 390 + level * 22;
-                    enemyShots.push({x, y, w: 36, h: 36, image: inv.image, vx: aimX / distance * speed, vy: Math.max(250, aimY / distance * speed)});
-                }
-            }
-            function burst(x, y, color) { for (let i = 0; i < 14; i++) particles.push({x, y, vx: (Math.random() - .5) * 180, vy: (Math.random() - .5) * 180, life: .55, color}); }
+            function beamRect(attack) { return attack.horizontal ? {x: arena.x, y: attack.center - attack.size / 2, w: arena.w, h: attack.size} : {x: attack.center - attack.size / 2, y: arena.y, w: attack.size, h: arena.h}; }
+            function dash() { if (state !== 'playing' || player.dashCooldown > 0) return; player.dash = .2; player.dashCooldown = Math.max(1.25, 2.5 - level * .04); player.invulnerable = Math.max(player.invulnerable, .25); burst(player.x + 22, player.y + 22, '#7ee7ff'); }
+            function burst(x, y, color) { for (let i = 0; i < 16; i++) particles.push({x, y, vx: (Math.random() - .5) * 220, vy: (Math.random() - .5) * 220, life: .65, color}); }
             function hitPlayer() {
-                if (player.invulnerable > 0) return; lives--; burst(player.x + player.w / 2, player.y + player.h / 2, '#7eb8ff'); updateHud();
-                if (lives <= 0) endGame(); else { player.x = 420; player.y = 520; player.invulnerable = .9; }
+                if (player.invulnerable > 0) return; hp--; player.invulnerable = .95; burst(player.x + 22, player.y + 22, '#ff355d'); updateHud();
+                if (hp <= 0) endGame();
             }
-            function endGame() {
-                state = 'gameover'; if (score > highScore) { highScore = score; localStorage.setItem('flop-invaders-high', String(score)); updateHud(); }
-                ui.restart.classList.add('show');
-            }
-            function togglePause() { if (state === 'playing') state = 'paused'; else if (state === 'paused') state = 'playing'; ui.pause.textContent = state === 'paused' ? 'Resume' : 'Pause'; }
+            function endGame() { state = 'gameover'; if (score > highScore) { highScore = Math.floor(score); localStorage.setItem('flop-boss-high', highScore); updateHud(); } ui.restart.classList.add('show'); }
+            function togglePause() { if (state === 'playing' || state === 'intermission') state = 'paused'; else if (state === 'paused') state = intermission > 0 ? 'intermission' : 'playing'; ui.pause.textContent = state === 'paused' ? 'Resume' : 'Pause'; }
 
             function update(dt) {
-                stars.forEach(star => { star.y += star.s * dt; if (star.y > canvas.height) { star.y = 0; star.x = Math.random() * canvas.width; } });
-                if (state !== 'playing') return;
+                if (state === 'paused' || state === 'gameover') return;
+                if (state === 'intermission') { intermission -= dt; if (intermission <= 0) { state = 'playing'; startLevel(); } return; }
+                levelTime += dt; score += dt * (25 + level * 5); player.invulnerable -= dt; player.dash -= dt; player.dashCooldown -= dt;
                 let dx = 0, dy = 0;
-                if (keys.has('ArrowLeft') || keys.has('KeyA')) dx--;
-                if (keys.has('ArrowRight') || keys.has('KeyD')) dx++;
-                if (keys.has('ArrowUp') || keys.has('KeyW')) dy--;
-                if (keys.has('ArrowDown') || keys.has('KeyS')) dy++;
+                if (keys.has('ArrowLeft') || keys.has('KeyA')) dx--; if (keys.has('ArrowRight') || keys.has('KeyD')) dx++;
+                if (keys.has('ArrowUp') || keys.has('KeyW')) dy--; if (keys.has('ArrowDown') || keys.has('KeyS')) dy++;
                 if (dx && dy) { dx *= .707; dy *= .707; }
-                player.x = Math.max(0, Math.min(canvas.width - player.w, player.x + dx * player.speed * dt));
-                player.y = Math.max(300, Math.min(canvas.height - player.h - 8, player.y + dy * player.speed * dt));
-                if (keys.has('Space')) fire();
-                shotCooldown -= dt; player.invulnerable -= dt;
-                shots.forEach(s => s.y -= 440 * dt); enemyShots.forEach(s => { s.y += s.vy * dt; s.x += s.vx * dt; });
-                shots = shots.filter(s => s.y + s.h > 0); enemyShots = enemyShots.filter(s => s.y < canvas.height);
-
-                let edge = false;
-                invaders.forEach(inv => { inv.x += formationDirection * formationSpeed * dt; if (inv.x < 12 || inv.x + inv.w > canvas.width - 12) edge = true; });
-                if (edge) { formationDirection *= -1; invaders.forEach(inv => { inv.x += formationDirection * formationSpeed * dt * 2; inv.y += 34; }); }
-                enemyFireTimer -= dt; if (enemyFireTimer <= 0) { enemyFire(); enemyFireTimer = Math.max(.1, .3 - level * .02) * (.7 + Math.random() * .45); }
-
-                shots.forEach(shot => invaders.forEach(inv => {
-                    if (!shot.dead && !inv.dead && overlaps(shot, inv)) { shot.dead = inv.dead = true; score += inv.points; burst(inv.x + inv.w / 2, inv.y + inv.h / 2, '#ffcb47'); }
-                }));
-                shots = shots.filter(s => !s.dead); invaders = invaders.filter(inv => !inv.dead);
-                enemyShots.forEach(shot => { if (!shot.dead && overlaps(shot, player)) { shot.dead = true; hitPlayer(); } });
-                enemyShots = enemyShots.filter(s => !s.dead);
-                if (invaders.some(inv => inv.y + inv.h >= player.y || overlaps(inv, player))) endGame();
-                if (!invaders.length) { score += 500 * level; level++; spawnLevel(); updateHud(); }
+                const speed = player.speed * (player.dash > 0 ? 2.7 : 1);
+                player.x = Math.max(arena.x + 5, Math.min(arena.x + arena.w - player.w - 5, player.x + dx * speed * dt));
+                player.y = Math.max(arena.y + 5, Math.min(arena.y + arena.h - player.h - 5, player.y + dy * speed * dt));
+                attackTimer -= dt;
+                if (attackTimer <= 0) { launchPattern(); attackTimer = Math.max(.48, 1.55 - level * .09) * (.85 + Math.random() * .35); }
+                attacks.forEach(attack => {
+                    attack.timer -= dt;
+                    if (attack.timer <= 0 && attack.phase === 'warning') { attack.phase = 'active'; attack.timer = attack.activeTime; }
+                    else if (attack.timer <= 0) attack.dead = true;
+                    if (attack.phase === 'active' && rectsOverlap({x: player.x + 8, y: player.y + 8, w: player.w - 16, h: player.h - 16}, beamRect(attack))) hitPlayer();
+                });
+                attacks = attacks.filter(attack => !attack.dead);
                 particles.forEach(p => { p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt; }); particles = particles.filter(p => p.life > 0);
-                if (score > highScore) highScore = score; updateHud();
+                if (levelTime >= levelDuration) { score += level * 750; level++; hp = Math.min(5, hp + 1); attacks = []; state = 'intermission'; intermission = 2.4; updateHud(); }
+                if (score > highScore) highScore = Math.floor(score); updateHud();
             }
 
-            function drawImage(image, object) { if (image.complete && image.naturalWidth) ctx.drawImage(image, object.x, object.y, object.w, object.h); else { ctx.fillStyle = '#7eb8ff'; ctx.fillRect(object.x, object.y, object.w, object.h); } }
+            function drawImage(image, object) { if (image.complete && image.naturalWidth) ctx.drawImage(image, object.x, object.y, object.w, object.h); }
+            function drawAttack(attack) {
+                const image = images[attack.image], rect = beamRect(attack), pulse = .5 + Math.sin(performance.now() / 55) * .35;
+                if (attack.phase === 'warning') {
+                    ctx.save(); ctx.globalAlpha = pulse; ctx.fillStyle = '#ff214f';
+                    if (attack.horizontal) ctx.fillRect(attack.side === 'left' ? arena.x - 58 : arena.x + arena.w + 10, rect.y, 48, rect.h);
+                    else ctx.fillRect(rect.x, attack.side === 'top' ? arena.y - 58 : arena.y + arena.h + 10, rect.w, 48);
+                    const marker = attack.horizontal ? {x: attack.side === 'left' ? arena.x - 54 : arena.x + arena.w + 14, y: attack.center - 20, w: 40, h: 40} : {x: attack.center - 20, y: attack.side === 'top' ? arena.y - 54 : arena.y + arena.h + 14, w: 40, h: 40};
+                    drawImage(image, marker); ctx.restore(); return;
+                }
+                ctx.save(); ctx.beginPath(); ctx.rect(rect.x, rect.y, rect.w, rect.h); ctx.clip();
+                ctx.fillStyle = 'rgba(255,25,65,.28)'; ctx.fillRect(rect.x, rect.y, rect.w, rect.h); ctx.shadowColor = '#ff1749'; ctx.shadowBlur = 18;
+                const tile = Math.max(28, attack.size - 8);
+                if (attack.horizontal) for (let x = rect.x - tile; x < rect.x + rect.w + tile; x += tile) drawImage(image, {x, y: attack.center - tile / 2, w: tile, h: tile});
+                else for (let y = rect.y - tile; y < rect.y + rect.h + tile; y += tile) drawImage(image, {x: attack.center - tile / 2, y, w: tile, h: tile});
+                ctx.restore();
+            }
             function render() {
-                ctx.fillStyle = '#050510'; ctx.fillRect(0, 0, canvas.width, canvas.height);
-                ctx.fillStyle = '#fff'; stars.forEach(s => { ctx.globalAlpha = .35 + s.r / 3; ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2); ctx.fill(); }); ctx.globalAlpha = 1;
-                invaders.forEach(inv => drawImage(images[inv.image], inv));
-                if (state !== 'gameover' || lives > 0) { ctx.globalAlpha = player.invulnerable > 0 && Math.floor(player.invulnerable * 10) % 2 ? .3 : 1; drawImage(images[0], player); ctx.globalAlpha = 1; }
-                ctx.fillStyle = '#72e6ff'; shots.forEach(s => ctx.fillRect(s.x, s.y, s.w, s.h));
-                enemyShots.forEach(s => {
-                    ctx.shadowColor = '#ff284f'; ctx.shadowBlur = 14; drawImage(images[s.image], s); ctx.shadowBlur = 0;
-                });
-                particles.forEach(p => { ctx.globalAlpha = Math.max(0, p.life * 2); ctx.fillStyle = p.color; ctx.fillRect(p.x, p.y, 5, 5); }); ctx.globalAlpha = 1;
-                if (state === 'paused' || state === 'gameover') {
-                    ctx.fillStyle = 'rgba(0,0,0,.72)'; ctx.fillRect(0, 0, canvas.width, canvas.height);
-                    ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.font = "500 58px Fredoka, sans-serif"; ctx.fillText(state === 'paused' ? 'PAUSED' : 'GAME OVER', canvas.width / 2, 265);
-                    ctx.font = "400 25px Fredoka, sans-serif"; ctx.fillText(state === 'paused' ? 'Press P to resume' : 'Press Enter to play again', canvas.width / 2, 310);
+                ctx.fillStyle = '#050510'; ctx.fillRect(0, 0, 900, 600); ctx.fillStyle = '#fff'; stars.forEach(s => { ctx.globalAlpha = .25 + s.r / 4; ctx.fillRect(s.x, s.y, s.r, s.r); }); ctx.globalAlpha = 1;
+                const boss = {x: 418, y: 20, w: 64, h: 64}; drawImage(images[1 + ((level - 1) % 5)], boss);
+                ctx.fillStyle = '#333'; ctx.fillRect(300, 86, 300, 8); ctx.fillStyle = '#ff355d'; ctx.fillRect(300, 86, 300 * Math.max(0, 1 - levelTime / levelDuration), 8);
+                ctx.strokeStyle = '#fff'; ctx.lineWidth = 5; ctx.strokeRect(arena.x, arena.y, arena.w, arena.h); attacks.forEach(drawAttack);
+                ctx.globalAlpha = player.invulnerable > 0 && Math.floor(player.invulnerable * 12) % 2 ? .35 : 1; ctx.shadowColor = player.dash > 0 ? '#65eaff' : 'transparent'; ctx.shadowBlur = 20; drawImage(images[0], player); ctx.shadowBlur = 0; ctx.globalAlpha = 1;
+                particles.forEach(p => { ctx.globalAlpha = Math.max(0, p.life * 1.5); ctx.fillStyle = p.color; ctx.fillRect(p.x, p.y, 5, 5); }); ctx.globalAlpha = 1;
+                ctx.fillStyle = '#fff'; ctx.font = '500 18px Fredoka, sans-serif'; ctx.textAlign = 'left'; ctx.fillText(`SURVIVE ${Math.max(0, levelDuration - levelTime).toFixed(1)}s`, arena.x, 550);
+                ctx.textAlign = 'right'; ctx.fillStyle = player.dashCooldown <= 0 ? '#65eaff' : '#aaa'; ctx.fillText(player.dashCooldown <= 0 ? 'DASH READY' : `DASH ${player.dashCooldown.toFixed(1)}s`, arena.x + arena.w, 550);
+                if (state === 'paused' || state === 'gameover' || state === 'intermission') {
+                    ctx.fillStyle = 'rgba(0,0,0,.72)'; ctx.fillRect(0, 0, 900, 600); ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.font = '500 54px Fredoka, sans-serif';
+                    ctx.fillText(state === 'paused' ? 'PAUSED' : state === 'gameover' ? 'GAME OVER' : `LEVEL ${level}`, 450, 270);
+                    ctx.font = '400 24px Fredoka, sans-serif'; ctx.fillText(state === 'paused' ? 'Press P to resume' : state === 'gameover' ? 'Press Enter to try again' : 'HP restored • Get ready!', 450, 310);
                 }
             }
             function loop(time) { const dt = Math.min(.033, ((time - lastTime) || 0) / 1000); lastTime = time; update(dt); render(); requestAnimationFrame(loop); }
-
             window.addEventListener('keydown', event => {
                 if (['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Space'].includes(event.code)) event.preventDefault();
-                if (event.code === 'KeyP' && !event.repeat) togglePause();
-                else if (event.code === 'Enter' && state === 'gameover') resetGame();
-                else keys.add(event.code);
+                if (event.code === 'Space' && !event.repeat) dash(); else if (event.code === 'KeyP' && !event.repeat) togglePause(); else if (event.code === 'Enter' && state === 'gameover') resetGame(); else keys.add(event.code);
             });
             window.addEventListener('keyup', event => keys.delete(event.code));
-            window.addEventListener('blur', () => { keys.clear(); if (state === 'playing') togglePause(); });
+            window.addEventListener('blur', () => { keys.clear(); if (state === 'playing' || state === 'intermission') togglePause(); });
             document.querySelectorAll('[data-key]').forEach(button => {
                 const code = button.dataset.key;
-                const press = event => { event.preventDefault(); keys.add(code); button.classList.add('active'); if (code === 'Space') fire(); canvas.focus(); };
+                const press = event => { event.preventDefault(); button.classList.add('active'); if (code === 'Space') dash(); else keys.add(code); canvas.focus(); };
                 const release = event => { event.preventDefault(); keys.delete(code); button.classList.remove('active'); };
                 button.addEventListener('pointerdown', press); button.addEventListener('pointerup', release); button.addEventListener('pointercancel', release); button.addEventListener('pointerleave', release);
             });
             ui.pause.addEventListener('click', togglePause); ui.restart.addEventListener('click', resetGame);
-            document.getElementById('themeButton').addEventListener('click', () => {
-                const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'; document.documentElement.dataset.theme = next; sessionStorage.setItem('floptropica-theme', next);
-            });
-            document.documentElement.dataset.theme = sessionStorage.getItem('floptropica-theme') || 'dark';
-            resetGame(); requestAnimationFrame(loop);
+            document.getElementById('themeButton').addEventListener('click', () => { const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'; document.documentElement.dataset.theme = next; sessionStorage.setItem('floptropica-theme', next); });
+            document.documentElement.dataset.theme = sessionStorage.getItem('floptropica-theme') || 'dark'; resetGame(); requestAnimationFrame(loop);
         })();
     </script>
 </body>
