@@ -28,7 +28,8 @@
         .tab-panel[hidden] { display: none; }
         .game-heading { margin-bottom: 4px; font-size: 1.55rem; }
         .game-shell { overflow: hidden; border: 2px solid var(--accent); border-radius: 12px; background: #03030b; box-shadow: 0 12px 35px rgba(0,0,0,.35); }
-        .hud { display: flex; justify-content: space-between; gap: 10px; padding: 11px 16px; background: #121222; color: #fff; font-weight: 500; }
+        .hud { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding: 11px 16px; background: #121222; color: #fff; font-weight: 500; }
+        .fullscreen-button { border: 1px solid #56566d; border-radius: 6px; background: #27273b; color: #fff; padding: 3px 9px; font: 500 .85rem 'Fredoka', sans-serif; cursor: pointer; }
         canvas { display: block; width: 100%; height: auto; aspect-ratio: 3 / 2; background: #050510; touch-action: none; }
         .controls { display: grid; grid-template-columns: repeat(3, 58px) 1fr 88px; gap: 8px; align-items: center; padding: 12px; background: #121222; }
         .control { min-height: 48px; border: 1px solid #52526a; border-radius: 9px; background: #24243a; color: white; font: 500 1.1rem 'Fredoka', sans-serif; cursor: pointer; user-select: none; touch-action: none; }
@@ -39,6 +40,9 @@
         .game-actions { text-align: center; margin-top: 18px; }
         .restart { display: none; border: 0; border-radius: 8px; background: var(--accent); color: #111; padding: 11px 20px; font: 500 1rem 'Fredoka', sans-serif; cursor: pointer; }
         .restart.show { display: inline-block; }
+        .game-shell:fullscreen { width: 100vw; height: 100vh; border: 0; border-radius: 0; display: flex; flex-direction: column; background: #03030b; }
+        .game-shell:fullscreen canvas { flex: 1; width: 100%; height: 100%; min-height: 0; object-fit: contain; }
+        .game-shell:fullscreen .hud, .game-shell:fullscreen .controls { flex: none; }
         footer { text-align: center; border-top: 1px solid var(--border); padding: 25px; color: var(--muted); }
         footer a { color: var(--accent); text-decoration: none; }
         @media (min-width: 760px) { .controls { display: none; } }
@@ -61,7 +65,7 @@
         <h2 class="game-heading">Flop Boss Fight</h2>
         <p class="instructions"><strong>Controls:</strong> Arrow keys or WASD to move · Space to dash · P to pause · Enter to restart</p>
         <section class="game-shell" aria-label="Flop Boss Fight game">
-            <div class="hud"><span>Score: <b id="score">0</b></span><span>Level: <b id="level">1</b></span><span>Round: <b id="round">1/10</b></span><span>HP: <b id="lives">3</b></span><span>High: <b id="highScore">0</b></span></div>
+            <div class="hud"><span>Score: <b id="score">0</b></span><span>Level: <b id="level">1</b></span><span>Round: <b id="round">1/10</b></span><span>HP: <b id="lives">3</b></span><span>High: <b id="highScore">0</b></span><button class="fullscreen-button" type="button" aria-label="Toggle boss fight fullscreen">⛶ Fullscreen</button></div>
             <canvas id="game" width="900" height="600" tabindex="0" aria-label="Use arrow keys to move and Space to dash"></canvas>
             <div class="controls" aria-label="Touch controls">
                 <button class="control up" data-key="ArrowUp" aria-label="Move up">▲</button>
@@ -79,7 +83,7 @@
             <h2 class="game-heading">Flop Road</h2>
             <p class="instructions"><strong>Controls:</strong> Left/Right or A/D to steer · Up/W to speed up · Down/S to slow down · P to pause · Enter to restart</p>
             <section class="game-shell" aria-label="Flop Road driving game">
-                <div class="hud"><span>Distance: <b id="driveScore">0</b>m</span><span>Level: <b id="driveLevel">1</b></span><span>HP: <b id="driveHp">♥♥♥</b></span><span>Best: <b id="driveHigh">0</b>m</span></div>
+                <div class="hud"><span>Distance: <b id="driveScore">0</b>m</span><span>Level: <b id="driveLevel">1</b></span><span>HP: <b id="driveHp">♥♥♥</b></span><span>Best: <b id="driveHigh">0</b>m</span><button class="fullscreen-button" type="button" aria-label="Toggle Flop Road fullscreen">⛶ Fullscreen</button></div>
                 <canvas id="driveGame" width="900" height="600" tabindex="0" aria-label="Use left and right keys to steer around traffic"></canvas>
                 <div class="controls" aria-label="Driving touch controls">
                     <button class="control up" data-drive-key="ArrowUp" aria-label="Speed up">▲</button>
@@ -342,6 +346,14 @@
             document.querySelectorAll('.tab-panel').forEach(panel => { panel.hidden = panel.id !== tab.dataset.tab; });
             document.getElementById(tab.dataset.tab).querySelector('canvas').focus();
         }));
+        document.querySelectorAll('.fullscreen-button').forEach(button => button.addEventListener('click', async () => {
+            const shell = button.closest('.game-shell');
+            if (document.fullscreenElement === shell) await document.exitFullscreen();
+            else { if (document.fullscreenElement) await document.exitFullscreen(); await shell.requestFullscreen(); }
+        }));
+        document.addEventListener('fullscreenchange', () => {
+            document.querySelectorAll('.fullscreen-button').forEach(button => { button.textContent = document.fullscreenElement === button.closest('.game-shell') ? '✕ Exit' : '⛶ Fullscreen'; });
+        });
     </script>
 </body>
 </html>
