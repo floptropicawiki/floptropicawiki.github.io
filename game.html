@@ -77,12 +77,14 @@
 
         <div class="tab-panel" id="drivePanel" hidden>
             <h2 class="game-heading">Flop Road</h2>
-            <p class="instructions"><strong>Controls:</strong> Left/Right arrows or A/D to steer · P to pause · Enter to restart</p>
+            <p class="instructions"><strong>Controls:</strong> Left/Right or A/D to steer · Up/W to speed up · Down/S to slow down · P to pause · Enter to restart</p>
             <section class="game-shell" aria-label="Flop Road driving game">
                 <div class="hud"><span>Distance: <b id="driveScore">0</b>m</span><span>Level: <b id="driveLevel">1</b></span><span>HP: <b id="driveHp">♥♥♥</b></span><span>Best: <b id="driveHigh">0</b>m</span></div>
                 <canvas id="driveGame" width="900" height="600" tabindex="0" aria-label="Use left and right keys to steer around traffic"></canvas>
                 <div class="controls" aria-label="Driving touch controls">
+                    <button class="control up" data-drive-key="ArrowUp" aria-label="Speed up">▲</button>
                     <button class="control left" data-drive-key="ArrowLeft" aria-label="Steer left">◀</button>
+                    <button class="control down" data-drive-key="ArrowDown" aria-label="Slow down">▼</button>
                     <button class="control right" data-drive-key="ArrowRight" aria-label="Steer right">▶</button>
                     <button class="control pause" id="drivePauseButton" aria-label="Pause driving game">Pause</button>
                 </div>
@@ -253,10 +255,12 @@
 
             function update(dt) {
                 if (panel.hidden || state !== 'playing') return;
-                level = 1 + Math.floor(distance / 700); const roadSpeed = 335 + Math.min(285, level * 24);
+                level = 1 + Math.floor(distance / 700);
+                const throttle = keys.has('ArrowUp') || keys.has('KeyW') ? 1.18 : keys.has('ArrowDown') || keys.has('KeyS') ? .82 : 1;
+                const roadSpeed = (335 + Math.min(285, level * 24)) * throttle;
                 distance += roadSpeed * dt / 10; roadOffset = (roadOffset + roadSpeed * dt) % 100; player.invulnerable -= dt; shake -= dt;
                 const steer = (keys.has('ArrowLeft') || keys.has('KeyA') ? -1 : 0) + (keys.has('ArrowRight') || keys.has('KeyD') ? 1 : 0);
-                player.vx += steer * 1050 * dt; player.vx *= Math.pow(.86, dt * 60); player.vx = Math.max(-370, Math.min(370, player.vx)); player.x += player.vx * dt;
+                player.vx += steer * 1450 * dt; player.vx *= Math.pow(.88, dt * 60); player.vx = Math.max(-485, Math.min(485, player.vx)); player.x += player.vx * dt;
                 if (player.x < road.left + 13) { player.x = road.left + 13; player.vx *= -.25; } if (player.x + player.w > road.right - 13) { player.x = road.right - player.w - 13; player.vx *= -.25; }
                 spawnTimer -= dt;
                 if (spawnTimer <= 0) { spawnCar(); spawnTimer = Math.max(.3, .9 - level * .04) * (.72 + Math.random() * .5); }
