@@ -251,8 +251,8 @@
             function spawnCar() {
                 const candidates = Array.from({length: 12}, randomRoadX).filter(x => !traffic.some(car => car.y < 210 && Math.abs((car.x + car.w / 2) - (x + 36)) < 88));
                 if (!candidates.length) return;
-                const x = candidates[Math.floor(Math.random() * candidates.length)], type = Math.random() < .76 ? 'forward' : 'stopped';
-                traffic.push({x, targetX: x, y: -135, w: 72, h: 116, type, changing: false, laneCooldown: 2.5 + Math.random() * 8, image: 1 + Math.floor(Math.random() * 5)});
+                const x = candidates[Math.floor(Math.random() * candidates.length)], forwardChance = Math.max(.5, .8 - level * .025), type = Math.random() < forwardChance ? 'forward' : 'stopped';
+                traffic.push({x, targetX: x, y: -135, w: 72, h: 116, type, changing: false, laneCooldown: Math.max(1.8, 4 - level * .12) + Math.random() * 7, image: 1 + Math.floor(Math.random() * 5)});
             }
             function sparks(x, y, color) { for (let i = 0; i < 22; i++) particles.push({x, y, vx: (Math.random() - .5) * 260, vy: (Math.random() - .5) * 260, life: .8, color}); }
             function hit(car) {
@@ -266,20 +266,24 @@
                 if (panel.hidden || state !== 'playing') return;
                 level = 1 + Math.floor(distance / 700);
                 const throttle = keys.has('ArrowUp') || keys.has('KeyW') ? 1.4 : keys.has('ArrowDown') || keys.has('KeyS') ? .6 : 1;
-                const roadSpeed = (380 + Math.min(320, level * 28)) * throttle;
+                const roadSpeed = (380 + Math.min(420, level * 34)) * throttle;
                 distance += roadSpeed * dt / 10; roadOffset = (roadOffset + roadSpeed * dt) % 100; player.invulnerable -= dt; shake -= dt;
                 const steer = (keys.has('ArrowLeft') || keys.has('KeyA') ? -1 : 0) + (keys.has('ArrowRight') || keys.has('KeyD') ? 1 : 0);
                 player.vx += steer * 1900 * dt; player.vx *= Math.pow(.9, dt * 60); player.vx = Math.max(-620, Math.min(620, player.vx)); player.x += player.vx * dt;
                 if (player.x < road.left + 13) { player.x = road.left + 13; player.vx *= -.25; } if (player.x + player.w > road.right - 13) { player.x = road.right - player.w - 13; player.vx *= -.25; }
                 spawnTimer -= dt;
-                if (spawnTimer <= 0) { spawnCar(); spawnTimer = Math.max(.3, .9 - level * .04) * (.72 + Math.random() * .5); }
+                if (spawnTimer <= 0) {
+                    spawnCar();
+                    if (level >= 4 && Math.random() < Math.min(.38, level * .035)) spawnCar();
+                    spawnTimer = Math.max(.22, .92 - level * .055) * (.68 + Math.random() * .48);
+                }
                 traffic.forEach(car => {
-                    const relativeSpeed = car.type === 'forward' ? Math.max(165, roadSpeed - 95 - level * 2) : roadSpeed * 1.08;
+                    const relativeSpeed = car.type === 'forward' ? Math.max(175, roadSpeed - Math.max(42, 110 - level * 5)) : roadSpeed * (1.08 + Math.min(.18, level * .012));
                     car.y += relativeSpeed * dt; car.laneCooldown -= dt;
                     if (!car.changing && car.laneCooldown <= 0) {
                         const candidates = Array.from({length: 8}, randomRoadX).filter(x => !traffic.some(other => other !== car && Math.abs(other.y - car.y) < 175 && Math.abs((other.x + other.w / 2) - (x + car.w / 2)) < 88));
-                        if (candidates.length && Math.random() < .38) { car.targetX = candidates[Math.floor(Math.random() * candidates.length)]; car.changing = true; }
-                        car.laneCooldown = 3.5 + Math.random() * 10;
+                        if (candidates.length && Math.random() < Math.min(.75, .3 + level * .035)) { car.targetX = candidates[Math.floor(Math.random() * candidates.length)]; car.changing = true; }
+                        car.laneCooldown = Math.max(1.8, 5.5 - level * .25) + Math.random() * 6;
                     }
                     car.x += (car.targetX - car.x) * Math.min(1, dt * (1.7 + level * .025));
                     if (car.changing && Math.abs(car.targetX - car.x) < 1) { car.x = car.targetX; car.changing = false; }
