@@ -141,9 +141,9 @@
                 const image = images[attack.image], rect = beamRect(attack), pulse = .5 + Math.sin(performance.now() / 55) * .35;
                 if (attack.phase === 'warning') {
                     ctx.save(); ctx.fillStyle = '#ff214f'; ctx.globalAlpha = .65 + pulse * .35;
-                    if (attack.horizontal) ctx.fillRect(attack.side === 'left' ? arena.x + 5 : arena.x + arena.w - 53, rect.y, 48, rect.h);
-                    else ctx.fillRect(rect.x, attack.side === 'top' ? arena.y + 5 : arena.y + arena.h - 53, rect.w, 48);
-                    const marker = attack.horizontal ? {x: attack.side === 'left' ? arena.x + 9 : arena.x + arena.w - 49, y: attack.center - 20, w: 40, h: 40} : {x: attack.center - 20, y: attack.side === 'top' ? arena.y + 9 : arena.y + arena.h - 49, w: 40, h: 40};
+                    if (attack.horizontal) ctx.fillRect(attack.side === 'left' ? arena.x - 56 : arena.x + arena.w + 8, rect.y, 48, rect.h);
+                    else ctx.fillRect(rect.x, attack.side === 'top' ? arena.y - 56 : arena.y + arena.h + 8, rect.w, 48);
+                    const marker = attack.horizontal ? {x: attack.side === 'left' ? arena.x - 52 : arena.x + arena.w + 12, y: attack.center - 20, w: 40, h: 40} : {x: attack.center - 20, y: attack.side === 'top' ? arena.y - 52 : arena.y + arena.h + 12, w: 40, h: 40};
                     drawImage(image, marker); ctx.restore(); return;
                 }
                 ctx.save(); ctx.beginPath(); ctx.rect(rect.x, rect.y, rect.w, rect.h); ctx.clip();
@@ -155,13 +155,15 @@
             }
             function render() {
                 ctx.fillStyle = '#050510'; ctx.fillRect(0, 0, 900, 600); ctx.fillStyle = '#fff'; stars.forEach(s => { ctx.globalAlpha = .25 + s.r / 4; ctx.fillRect(s.x, s.y, s.r, s.r); }); ctx.globalAlpha = 1;
-                const boss = {x: 418, y: 20, w: 64, h: 64}; drawImage(images[1 + ((level - 1) % 5)], boss);
-                ctx.fillStyle = '#333'; ctx.fillRect(300, 86, 300, 8); ctx.fillStyle = '#ff355d'; ctx.fillRect(300, 86, 300 * Math.max(0, 1 - levelTime / levelDuration), 8);
+                ctx.fillStyle = '#050510';
+                ctx.fillRect(arena.x - 64, arena.y - 5, 64, arena.h + 10); ctx.fillRect(arena.x + arena.w, arena.y - 5, 64, arena.h + 10);
+                ctx.fillRect(arena.x - 5, arena.y - 64, arena.w + 10, 64); ctx.fillRect(arena.x - 5, arena.y + arena.h, arena.w + 10, 64);
+                drawImage(images[1 + ((level - 1) % 5)], {x: 25, y: 20, w: 64, h: 64});
                 ctx.strokeStyle = '#fff'; ctx.lineWidth = 5; ctx.strokeRect(arena.x, arena.y, arena.w, arena.h); attacks.forEach(drawAttack);
                 ctx.globalAlpha = player.invulnerable > 0 && Math.floor(player.invulnerable * 12) % 2 ? .35 : 1; ctx.shadowColor = player.dash > 0 ? '#65eaff' : 'transparent'; ctx.shadowBlur = 20; drawImage(images[0], player); ctx.shadowBlur = 0; ctx.globalAlpha = 1;
                 particles.forEach(p => { ctx.globalAlpha = Math.max(0, p.life * 1.5); ctx.fillStyle = p.color; ctx.fillRect(p.x, p.y, 5, 5); }); ctx.globalAlpha = 1;
-                ctx.fillStyle = '#fff'; ctx.font = '500 18px Fredoka, sans-serif'; ctx.textAlign = 'left'; ctx.fillText(`SURVIVE ${Math.max(0, levelDuration - levelTime).toFixed(1)}s`, arena.x, 550);
-                ctx.textAlign = 'right'; ctx.fillStyle = player.dashCooldown <= 0 ? '#65eaff' : '#aaa'; ctx.fillText(player.dashCooldown <= 0 ? 'DASH READY' : `DASH ${player.dashCooldown.toFixed(1)}s`, arena.x + arena.w, 550);
+                ctx.fillStyle = '#fff'; ctx.font = '500 16px Fredoka, sans-serif'; ctx.textAlign = 'left'; ctx.fillText(`SURVIVE ${Math.max(0, levelDuration - levelTime).toFixed(1)}s`, arena.x + 12, arena.y + arena.h - 12);
+                ctx.textAlign = 'right'; ctx.fillStyle = player.dashCooldown <= 0 ? '#65eaff' : '#aaa'; ctx.fillText(player.dashCooldown <= 0 ? 'DASH READY' : `DASH ${player.dashCooldown.toFixed(1)}s`, arena.x + arena.w - 12, arena.y + arena.h - 12);
                 if (state === 'paused' || state === 'gameover' || state === 'intermission') {
                     ctx.fillStyle = 'rgba(0,0,0,.72)'; ctx.fillRect(0, 0, 900, 600); ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.font = '500 54px Fredoka, sans-serif';
                     ctx.fillText(state === 'paused' ? 'PAUSED' : state === 'gameover' ? 'GAME OVER' : `LEVEL ${level}`, 450, 270);
