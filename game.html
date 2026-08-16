@@ -238,11 +238,10 @@
             function updateHud() { ui.score.textContent = Math.floor(distance); ui.level.textContent = level; ui.hp.textContent = '♥'.repeat(hp) || '0'; ui.high.textContent = high; }
             function overlap(a, b) { const pad = 10; return a.x + pad < b.x + b.w - pad && a.x + a.w - pad > b.x + pad && a.y + pad < b.y + b.h - pad && a.y + a.h - pad > b.y + pad; }
             function spawnCar() {
-                const open = laneCenters.filter(center => !traffic.some(car => Math.abs(car.x + car.w / 2 - center) < 35 && car.y < 175));
+                const open = laneCenters.map((center, lane) => ({center, lane})).filter(option => !traffic.some(car => car.lane === option.lane && car.y < 205));
                 if (!open.length) return;
-                const center = open[Math.floor(Math.random() * open.length)], roll = Math.random();
-                const type = roll < .42 ? 'oncoming' : roll < .75 ? 'away' : 'stopped';
-                traffic.push({x: center - 36, baseX: center - 36, y: -135, w: 72, h: 116, type, image: 1 + Math.floor(Math.random() * 5), age: Math.random() * 5, weave: type === 'stopped' ? 0 : Math.random() * 12});
+                const spot = open[Math.floor(Math.random() * open.length)], type = Math.random() < .76 ? 'forward' : 'stopped';
+                traffic.push({x: spot.center - 36, y: -135, w: 72, h: 116, type, lane: spot.lane, targetLane: spot.lane, changing: false, laneCooldown: 3 + Math.random() * 8, image: 1 + Math.floor(Math.random() * 5)});
             }
             function sparks(x, y, color) { for (let i = 0; i < 22; i++) particles.push({x, y, vx: (Math.random() - .5) * 260, vy: (Math.random() - .5) * 260, life: .8, color}); }
             function hit(car) {
@@ -254,18 +253,31 @@
 
             function update(dt) {
                 if (panel.hidden || state !== 'playing') return;
-                level = 1 + Math.floor(distance / 700); const roadSpeed = 250 + Math.min(220, level * 18);
-                distance += roadSpeed * dt / 12; roadOffset = (roadOffset + roadSpeed * dt) % 100; player.invulnerable -= dt; shake -= dt;
+                level = 1 + Math.floor(distance / 700); const roadSpeed = 335 + Math.min(285, level * 24);
+                distance += roadSpeed * dt / 10; roadOffset = (roadOffset + roadSpeed * dt) % 100; player.invulnerable -= dt; shake -= dt;
                 const steer = (keys.has('ArrowLeft') || keys.has('KeyA') ? -1 : 0) + (keys.has('ArrowRight') || keys.has('KeyD') ? 1 : 0);
                 player.vx += steer * 1050 * dt; player.vx *= Math.pow(.86, dt * 60); player.vx = Math.max(-370, Math.min(370, player.vx)); player.x += player.vx * dt;
                 if (player.x < road.left + 13) { player.x = road.left + 13; player.vx *= -.25; } if (player.x + player.w > road.right - 13) { player.x = road.right - player.w - 13; player.vx *= -.25; }
                 spawnTimer -= dt;
-                if (spawnTimer <= 0) { spawnCar(); spawnTimer = Math.max(.36, 1.18 - level * .055) * (.75 + Math.random() * .55); }
+                if (spawnTimer <= 0) { spawnCar(); spawnTimer = Math.max(.3, .9 - level * .04) * (.72 + Math.random() * .5); }
                 traffic.forEach(car => {
-                    car.age += dt; const relativeSpeed = car.type === 'oncoming' ? roadSpeed + 205 + level * 10 : car.type === 'away' ? Math.max(90, roadSpeed - 115 - level * 2) : roadSpeed;
-                    car.y += relativeSpeed * dt; car.x = car.baseX + Math.sin(car.age * (car.type === 'oncoming' ? 2.1 : 1.25)) * car.weave;
+                    const relativeSpeed = car.type === 'forward' ? Math.max(115, roadSpeed - 145 - level * 3) : roadSpeed;
+                    car.y += relativeSpeed * dt; car.laneCooldown -= dt;
+                    if (!car.changing && car.laneCooldown <= 0) {
+                        const choices = [car.lane - 1, car.lane + 1].filter(lane => lane >= 0 && lane < laneCenters.length && !traffic.some(other => other !== car && (other.lane === lane || other.targetLane === lane) && Math.abs(other.y - car.y) < 165));
+                        if (choices.length && Math.random() < .42) { car.targetLane = choices[Math.floor(Math.random() * choices.length)]; car.changing = true; }
+                        car.laneCooldown = 4 + Math.random() * 9;
+                    }
+                    const targetX = laneCenters[car.targetLane] - car.w / 2; car.x += (targetX - car.x) * Math.min(1, dt * 2.4);
+                    if (car.changing && Math.abs(targetX - car.x) < 1) { car.x = targetX; car.lane = car.targetLane; car.changing = false; }
                     if (overlap(player, car)) hit(car);
                 });
+                for (let i = 0; i < traffic.length; i++) for (let j = i + 1; j < traffic.length; j++) {
+                    const a = traffic[i], b = traffic[j];
+                    if (Math.abs((a.x + a.w / 2) - (b.x + b.w / 2)) < 62 && Math.abs(a.y - b.y) < 124) {
+                        if (a.y < b.y) a.y = b.y - 124; else b.y = a.y - 124;
+                    }
+                }
                 traffic = traffic.filter(car => !car.dead && car.y < 720);
                 scenery.forEach(item => { item.y += roadSpeed * dt; if (item.y > 650) { item.y -= 720; item.size = 16 + Math.random() * 15; } });
                 particles.forEach(p => { p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= .97; p.vy *= .97; p.life -= dt; }); particles = particles.filter(p => p.life > 0);
@@ -274,10 +286,10 @@
 
             function roundRect(x, y, w, h, r) { ctx.beginPath(); ctx.roundRect(x, y, w, h, r); }
             function drawCar(car, playerCar = false) {
-                ctx.save(); const cx = car.x + car.w / 2, cy = car.y + car.h / 2; ctx.translate(cx, cy); if (!playerCar && car.type === 'oncoming') ctx.rotate(Math.PI); ctx.translate(-cx, -cy);
+                ctx.save();
                 ctx.fillStyle = 'rgba(0,0,0,.38)'; roundRect(car.x + 5, car.y + 8, car.w, car.h, 17); ctx.fill();
                 ctx.fillStyle = '#0d0d13'; ctx.fillRect(car.x - 5, car.y + 21, 8, 25); ctx.fillRect(car.x + car.w - 3, car.y + 21, 8, 25); ctx.fillRect(car.x - 5, car.y + car.h - 45, 8, 25); ctx.fillRect(car.x + car.w - 3, car.y + car.h - 45, 8, 25);
-                const gradient = ctx.createLinearGradient(car.x, car.y, car.x + car.w, car.y + car.h); gradient.addColorStop(0, playerCar ? '#ffcf2f' : car.type === 'oncoming' ? '#d72e48' : car.type === 'away' ? '#247dcc' : '#6d6575'); gradient.addColorStop(1, playerCar ? '#f36f21' : '#201a2a');
+                const gradient = ctx.createLinearGradient(car.x, car.y, car.x + car.w, car.y + car.h); gradient.addColorStop(0, playerCar ? '#ffcf2f' : car.type === 'forward' ? '#247dcc' : '#6d6575'); gradient.addColorStop(1, playerCar ? '#f36f21' : '#201a2a');
                 ctx.fillStyle = gradient; roundRect(car.x, car.y, car.w, car.h, 18); ctx.fill(); ctx.strokeStyle = playerCar ? '#fff1a4' : '#cecad8'; ctx.lineWidth = 2; ctx.stroke();
                 ctx.fillStyle = '#9dd9e8'; roundRect(car.x + 11, car.y + 24, car.w - 22, 29, 8); ctx.fill();
                 ctx.save(); roundRect(car.x + 16, car.y + 61, car.w - 32, 40, 7); ctx.clip(); const image = images[playerCar ? 0 : car.image]; if (image.complete && image.naturalWidth) ctx.drawImage(image, car.x + 16, car.y + 61, car.w - 32, 40); ctx.restore();
