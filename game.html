@@ -226,7 +226,7 @@
             'use strict';
             const canvas = document.getElementById('driveGame'), ctx = canvas.getContext('2d'), panel = document.getElementById('drivePanel');
             const ui = {score: document.getElementById('driveScore'), level: document.getElementById('driveLevel'), hp: document.getElementById('driveHp'), high: document.getElementById('driveHigh'), pause: document.getElementById('drivePauseButton'), restart: document.getElementById('driveRestartButton')};
-            const road = {left: 165, right: 735, width: 570}, laneCenters = [260, 450, 640];
+            const road = {left: 165, right: 735, width: 570};
             const images = ['floppfp.png','invader1.png','invader2.png','invader3.png','invader4.png','invader5.png'].map(src => { const image = new Image(); image.src = src; return image; });
             const keys = new Set();
             let player, traffic, particles, scenery, distance, level, hp, high, state, spawnTimer, roadOffset, shake, lastTime;
@@ -239,11 +239,12 @@
             }
             function updateHud() { ui.score.textContent = Math.floor(distance); ui.level.textContent = level; ui.hp.textContent = '♥'.repeat(hp) || '0'; ui.high.textContent = high; }
             function overlap(a, b) { const pad = 10; return a.x + pad < b.x + b.w - pad && a.x + a.w - pad > b.x + pad && a.y + pad < b.y + b.h - pad && a.y + a.h - pad > b.y + pad; }
+            function randomRoadX() { return road.left + 16 + Math.random() * (road.width - 104); }
             function spawnCar() {
-                const open = laneCenters.map((center, lane) => ({center, lane})).filter(option => !traffic.some(car => car.lane === option.lane && car.y < 205));
-                if (!open.length) return;
-                const spot = open[Math.floor(Math.random() * open.length)], type = Math.random() < .76 ? 'forward' : 'stopped';
-                traffic.push({x: spot.center - 36, y: -135, w: 72, h: 116, type, lane: spot.lane, targetLane: spot.lane, changing: false, laneCooldown: 3 + Math.random() * 8, image: 1 + Math.floor(Math.random() * 5)});
+                const candidates = Array.from({length: 12}, randomRoadX).filter(x => !traffic.some(car => car.y < 210 && Math.abs((car.x + car.w / 2) - (x + 36)) < 88));
+                if (!candidates.length) return;
+                const x = candidates[Math.floor(Math.random() * candidates.length)], type = Math.random() < .76 ? 'forward' : 'stopped';
+                traffic.push({x, targetX: x, y: -135, w: 72, h: 116, type, changing: false, laneCooldown: 2.5 + Math.random() * 8, image: 1 + Math.floor(Math.random() * 5)});
             }
             function sparks(x, y, color) { for (let i = 0; i < 22; i++) particles.push({x, y, vx: (Math.random() - .5) * 260, vy: (Math.random() - .5) * 260, life: .8, color}); }
             function hit(car) {
@@ -256,8 +257,8 @@
             function update(dt) {
                 if (panel.hidden || state !== 'playing') return;
                 level = 1 + Math.floor(distance / 700);
-                const throttle = keys.has('ArrowUp') || keys.has('KeyW') ? 1.18 : keys.has('ArrowDown') || keys.has('KeyS') ? .82 : 1;
-                const roadSpeed = (335 + Math.min(285, level * 24)) * throttle;
+                const throttle = keys.has('ArrowUp') || keys.has('KeyW') ? 1.4 : keys.has('ArrowDown') || keys.has('KeyS') ? .6 : 1;
+                const roadSpeed = (380 + Math.min(320, level * 28)) * throttle;
                 distance += roadSpeed * dt / 10; roadOffset = (roadOffset + roadSpeed * dt) % 100; player.invulnerable -= dt; shake -= dt;
                 const steer = (keys.has('ArrowLeft') || keys.has('KeyA') ? -1 : 0) + (keys.has('ArrowRight') || keys.has('KeyD') ? 1 : 0);
                 player.vx += steer * 1450 * dt; player.vx *= Math.pow(.88, dt * 60); player.vx = Math.max(-485, Math.min(485, player.vx)); player.x += player.vx * dt;
@@ -265,15 +266,15 @@
                 spawnTimer -= dt;
                 if (spawnTimer <= 0) { spawnCar(); spawnTimer = Math.max(.3, .9 - level * .04) * (.72 + Math.random() * .5); }
                 traffic.forEach(car => {
-                    const relativeSpeed = car.type === 'forward' ? Math.max(115, roadSpeed - 145 - level * 3) : roadSpeed;
+                    const relativeSpeed = car.type === 'forward' ? Math.max(165, roadSpeed - 95 - level * 2) : roadSpeed * 1.08;
                     car.y += relativeSpeed * dt; car.laneCooldown -= dt;
                     if (!car.changing && car.laneCooldown <= 0) {
-                        const choices = [car.lane - 1, car.lane + 1].filter(lane => lane >= 0 && lane < laneCenters.length && !traffic.some(other => other !== car && (other.lane === lane || other.targetLane === lane) && Math.abs(other.y - car.y) < 165));
-                        if (choices.length && Math.random() < .42) { car.targetLane = choices[Math.floor(Math.random() * choices.length)]; car.changing = true; }
-                        car.laneCooldown = 4 + Math.random() * 9;
+                        const candidates = Array.from({length: 8}, randomRoadX).filter(x => !traffic.some(other => other !== car && Math.abs(other.y - car.y) < 175 && Math.abs((other.x + other.w / 2) - (x + car.w / 2)) < 88));
+                        if (candidates.length && Math.random() < .38) { car.targetX = candidates[Math.floor(Math.random() * candidates.length)]; car.changing = true; }
+                        car.laneCooldown = 3.5 + Math.random() * 10;
                     }
-                    const targetX = laneCenters[car.targetLane] - car.w / 2; car.x += (targetX - car.x) * Math.min(1, dt * 2.4);
-                    if (car.changing && Math.abs(targetX - car.x) < 1) { car.x = targetX; car.lane = car.targetLane; car.changing = false; }
+                    car.x += (car.targetX - car.x) * Math.min(1, dt * (1.7 + level * .025));
+                    if (car.changing && Math.abs(car.targetX - car.x) < 1) { car.x = car.targetX; car.changing = false; }
                     if (overlap(player, car)) hit(car);
                 });
                 for (let i = 0; i < traffic.length; i++) for (let j = i + 1; j < traffic.length; j++) {
@@ -290,7 +291,9 @@
 
             function roundRect(x, y, w, h, r) { ctx.beginPath(); ctx.roundRect(x, y, w, h, r); }
             function drawCar(car, playerCar = false) {
-                ctx.save();
+                ctx.save(); const cx = car.x + car.w / 2, cy = car.y + car.h / 2;
+                const angle = playerCar ? Math.max(-.09, Math.min(.09, player.vx / 4200)) : Math.max(-.08, Math.min(.08, (car.targetX - car.x) / 500));
+                ctx.translate(cx, cy); ctx.rotate(angle); ctx.translate(-cx, -cy);
                 ctx.fillStyle = 'rgba(0,0,0,.38)'; roundRect(car.x + 5, car.y + 8, car.w, car.h, 17); ctx.fill();
                 ctx.fillStyle = '#0d0d13'; ctx.fillRect(car.x - 5, car.y + 21, 8, 25); ctx.fillRect(car.x + car.w - 3, car.y + 21, 8, 25); ctx.fillRect(car.x - 5, car.y + car.h - 45, 8, 25); ctx.fillRect(car.x + car.w - 3, car.y + car.h - 45, 8, 25);
                 const gradient = ctx.createLinearGradient(car.x, car.y, car.x + car.w, car.y + car.h); gradient.addColorStop(0, playerCar ? '#ffcf2f' : car.type === 'forward' ? '#247dcc' : '#6d6575'); gradient.addColorStop(1, playerCar ? '#f36f21' : '#201a2a');
