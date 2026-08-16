@@ -65,7 +65,7 @@
         <h2 class="game-heading">Flop Boss Fight</h2>
         <p class="instructions"><strong>Controls:</strong> Arrow keys or WASD to move · Space to dash · P to pause · Enter to restart</p>
         <section class="game-shell" aria-label="Flop Boss Fight game">
-            <div class="hud"><span>Score: <b id="score">0</b></span><span>Level: <b id="level">1</b></span><span>Round: <b id="round">1/10</b></span><span>HP: <b id="lives">5</b></span><span>High: <b id="highScore">0</b></span><button class="fullscreen-button" type="button" aria-label="Toggle boss fight fullscreen">⛶ Fullscreen</button></div>
+            <div class="hud"><span>Score: <b id="score">0</b></span><span>Level: <b id="level">1</b></span><span>Round: <b id="round">1/10</b></span><span>HP: <b id="lives">3</b></span><span>High: <b id="highScore">0</b></span><button class="fullscreen-button" type="button" aria-label="Toggle boss fight fullscreen">⛶ Fullscreen</button></div>
             <canvas id="game" width="900" height="600" tabindex="0" aria-label="Use arrow keys to move and Space to dash"></canvas>
             <div class="controls" aria-label="Touch controls">
                 <button class="control up" data-key="ArrowUp" aria-label="Move up">▲</button>
@@ -109,7 +109,7 @@
             let player, attacks, particles, level, round, hp, score, highScore, attackTimer, intermission, state, lastTime;
 
             function resetGame() {
-                level = 1; hp = 5; score = 0; highScore = Number(localStorage.getItem('flop-boss-high') || 0);
+                level = 1; hp = 3; score = 0; highScore = Number(localStorage.getItem('flop-boss-high') || 0);
                 player = {x: 423, y: 425, w: 44, h: 44, speed: 255, invulnerable: 1.2, dash: 0, dashCooldown: 0};
                 attacks = []; particles = []; state = 'playing'; intermission = 0; ui.restart.classList.remove('show'); startLevel(); canvas.focus();
             }
@@ -168,7 +168,7 @@
                 });
                 attacks = attacks.filter(attack => !attack.dead);
                 particles.forEach(p => { p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt; }); particles = particles.filter(p => p.life > 0);
-                if (round === 10 && attacks.length === 0) { score += level * 750; level++; hp = Math.min(5, hp + 1); state = 'intermission'; intermission = 2.4; updateHud(); }
+                if (round === 10 && attacks.length === 0) { score += level * 750; level++; hp = Math.min(3, hp + 1); state = 'intermission'; intermission = 2.4; updateHud(); }
                 if (score > highScore) highScore = Math.floor(score); updateHud();
             }
 
