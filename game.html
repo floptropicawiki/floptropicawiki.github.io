@@ -113,7 +113,7 @@
                 player = {x: 423, y: 425, w: 44, h: 44, speed: 255, invulnerable: 1.2, dash: 0, dashCooldown: 0};
                 attacks = []; particles = []; state = 'playing'; intermission = 0; ui.restart.classList.remove('show'); startLevel(); canvas.focus();
             }
-            function startLevel() { round = 0; attackTimer = 1.2; attacks = []; updateHud(); }
+            function startLevel() { round = 0; attackTimer = 1.6; attacks = []; updateHud(); }
             function updateHud() { ui.score.textContent = Math.floor(score); ui.level.textContent = level; ui.round.textContent = `${Math.max(1, round)}/10`; ui.lives.textContent = '♥'.repeat(hp) || '0'; ui.high.textContent = highScore; }
             function rectsOverlap(a, b) { return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y; }
             function imageIndex() { return 1 + Math.floor(Math.random() * 5); }
@@ -121,7 +121,7 @@
                 const horizontal = side === 'left' || side === 'right';
                 const beamSize = Math.min(78, 42 + level * 3);
                 const center = aimed ? (horizontal ? player.y + player.h / 2 : player.x + player.w / 2) : (horizontal ? arena.y + 45 + Math.random() * (arena.h - 90) : arena.x + 45 + Math.random() * (arena.w - 90));
-                return {side, horizontal, center: Math.max(horizontal ? arena.y + beamSize / 2 : arena.x + beamSize / 2, Math.min(horizontal ? arena.y + arena.h - beamSize / 2 : arena.x + arena.w - beamSize / 2, center + offset)), size: beamSize, image: imageIndex(), phase: 'warning', timer: Math.max(.38, 1.05 - level * .065), activeTime: Math.min(1.15, .55 + level * .045)};
+                return {side, horizontal, center: Math.max(horizontal ? arena.y + beamSize / 2 : arena.x + beamSize / 2, Math.min(horizontal ? arena.y + arena.h - beamSize / 2 : arena.x + arena.w - beamSize / 2, center + offset)), size: beamSize, image: imageIndex(), phase: 'warning', timer: Math.max(.7, 1.55 - level * .065), activeTime: Math.min(1.15, .55 + level * .045)};
             }
             function launchPattern() {
                 round++;
@@ -159,7 +159,11 @@
                 player.x = Math.max(arena.x + 5, Math.min(arena.x + arena.w - player.w - 5, player.x + dx * speed * dt));
                 player.y = Math.max(arena.y + 5, Math.min(arena.y + arena.h - player.h - 5, player.y + dy * speed * dt));
                 attackTimer -= dt;
-                if (attackTimer <= 0 && round < 10) { launchPattern(); attackTimer = Math.max(.48, 1.55 - level * .09) * (.85 + Math.random() * .35); }
+                if (attackTimer <= 0 && round < 10 && attacks.length === 0) {
+                    launchPattern();
+                    const attackWindow = Math.max(...attacks.map(attack => attack.timer + attack.activeTime));
+                    attackTimer = attackWindow + Math.max(.5, .9 - level * .03);
+                }
                 attacks.forEach(attack => {
                     attack.timer -= dt;
                     if (attack.timer <= 0 && attack.phase === 'warning') { attack.phase = 'active'; attack.timer = attack.activeTime; }
