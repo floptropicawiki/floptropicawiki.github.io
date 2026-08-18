@@ -242,7 +242,7 @@
             function reset() {
                 player = {x: 414, y: 448, w: 72, h: 118, vx: 0, invulnerable: 1}; traffic = []; particles = [];
                 scenery = Array.from({length: 16}, (_, i) => ({side: i % 2, y: (i * 83) % 650, size: 16 + Math.random() * 15}));
-                distance = 0; level = 1; hp = 5; high = Number(localStorage.getItem('flop-road-high') || 0); state = 'playing'; spawnTimer = .9; roadOffset = 0; shake = 0; escapeX = 450; escapeTarget = 450; escapeTimer = 3; gasPhase = 'highway'; gasBlend = 0; gasTimer = 0; nextGas = 100;
+                distance = 0; level = 1; hp = 5; high = Number(localStorage.getItem('flop-road-high') || 0); state = 'playing'; spawnTimer = .9; roadOffset = 0; shake = 0; escapeX = 450; escapeTarget = 450; escapeTimer = 3; gasPhase = 'highway'; gasBlend = 0; gasTimer = 0; nextGas = 2800;
                 ui.restart.classList.remove('show'); ui.pause.textContent = 'Pause'; updateHud(); canvas.focus();
             }
             function updateHud() {
@@ -293,7 +293,7 @@
                     if (gasTimer <= 0) { hp = Math.min(5, hp + 1); gasPhase = 'leaving'; updateHud(); }
                 } else if (gasPhase === 'leaving') {
                     gasBlend = Math.max(0, gasBlend - dt / 2.4);
-                    if (gasBlend <= 0) { gasPhase = 'highway'; nextGas = distance + 1000; spawnTimer = 1.1; }
+                    if (gasBlend <= 0) { gasPhase = 'highway'; nextGas += 2800; spawnTimer = 1.1; }
                 }
                 let roadSpeed = cruiseSpeed;
                 if (gasPhase === 'entering') roadSpeed *= 1 - gasBlend * .7;
