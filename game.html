@@ -103,7 +103,7 @@
             const canvas = document.getElementById('game'), ctx = canvas.getContext('2d');
             const ui = { score: document.getElementById('score'), level: document.getElementById('level'), round: document.getElementById('round'), lives: document.getElementById('lives'), high: document.getElementById('highScore'), restart: document.getElementById('restartButton'), pause: document.getElementById('pauseButton') };
             const arena = {x: 145, y: 105, w: 610, h: 405};
-            const imageFiles = ['floppfp.png', 'invader1.png', 'invader2.png', 'invader3.png', 'invader4.png', 'invader5.png', 'invader6.png'];
+            const imageFiles = ['floppfp.png', 'invader1.png', 'invader2.png', 'invader3.png', 'invader4.png', 'invader5.png', 'invader6.png', 'invader7.png', 'invader8.png', 'invader9.png', 'invader10.png', 'invader11.png'];
             const images = imageFiles.map(src => { const image = new Image(); image.src = src; return image; });
             const keys = new Set(), stars = Array.from({length: 90}, () => ({x: Math.random() * 900, y: Math.random() * 600, r: Math.random() * 1.8 + .2}));
             let player, attacks, particles, level, round, hp, score, highScore, attackTimer, intermission, state, lastTime;
@@ -235,7 +235,7 @@
             const canvas = document.getElementById('driveGame'), ctx = canvas.getContext('2d'), panel = document.getElementById('drivePanel');
             const ui = {score: document.getElementById('driveScore'), level: document.getElementById('driveLevel'), hp: document.getElementById('driveHp'), status: document.getElementById('driveStatus'), high: document.getElementById('driveHigh'), pause: document.getElementById('drivePauseButton'), restart: document.getElementById('driveRestartButton')};
             const road = {left: 165, right: 735, width: 570};
-            const images = ['floppfp.png','invader1.png','invader2.png','invader3.png','invader4.png','invader5.png','invader6.png'].map(src => { const image = new Image(); image.src = src; return image; });
+            const images = ['floppfp.png','invader1.png','invader2.png','invader3.png','invader4.png','invader5.png','invader6.png','invader7.png','invader8.png','invader9.png','invader10.png','invader11.png'].map(src => { const image = new Image(); image.src = src; return image; });
             const keys = new Set();
             let player, traffic, particles, scenery, distance, level, hp, high, state, spawnTimer, roadOffset, shake, lastTime, escapeX, escapeTarget, escapeTimer, gasPhase, gasBlend, gasTimer, nextGas;
 
