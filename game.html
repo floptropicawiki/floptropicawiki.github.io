@@ -263,7 +263,9 @@
                 const candidates = Array.from({length: 18}, () => randomRoadX(width)).filter(x => leavesEscape(x, width) && !traffic.some(car => car.y < 235 && Math.abs((car.x + car.w / 2) - (x + width / 2)) < (car.w + width) / 2 + 18));
                 if (!candidates.length) return;
                 const x = candidates[Math.floor(Math.random() * candidates.length)];
-                traffic.push({x, targetX: x, y: -height - 20, w: width, h: height, type, changing: false, bmwSwitched: false, laneCooldown: type === 'bmw' ? .3 + Math.random() * .8 : Math.max(1.8, 4 - level * .12) + Math.random() * 7, image: 1 + Math.floor(Math.random() * 5)});
+                const laneWidth = road.width / 4, lane = Math.max(0, Math.min(3, Math.floor((x + width / 2 - road.left) / laneWidth)));
+                const bmwDirection = lane === 0 ? 1 : lane === 3 ? -1 : Math.random() < .5 ? -1 : 1;
+                traffic.push({x, targetX: x, y: -height - 20, w: width, h: height, type, lane, bmwDirection, changing: false, bmwSwitched: false, laneCooldown: type === 'bmw' ? .3 + Math.random() * .8 : Math.max(1.8, 4 - level * .12) + Math.random() * 7, image: 1 + Math.floor(Math.random() * 5)});
             }
             function sparks(x, y, color) { for (let i = 0; i < 22; i++) particles.push({x, y, vx: (Math.random() - .5) * 260, vy: (Math.random() - .5) * 260, life: .8, color}); }
             function hit(car) {
@@ -301,8 +303,8 @@
                     const relativeSpeed = car.type === 'bmw' ? Math.max(125, roadSpeed - 205) : car.type === 'semi' ? roadSpeed * .96 : car.type === 'forward' ? Math.max(175, roadSpeed - Math.max(42, 110 - level * 5)) : roadSpeed * (1.08 + Math.min(.18, level * .012));
                     car.y += relativeSpeed * dt; car.laneCooldown -= dt;
                     if (car.type !== 'semi' && !(car.type === 'bmw' && car.bmwSwitched) && !car.changing && car.laneCooldown <= 0) {
-                        const oneLane = road.width / 3;
-                        const possiblePositions = car.type === 'bmw' ? [car.x - oneLane, car.x + oneLane] : Array.from({length: 12}, () => randomRoadX(car.w));
+                        const oneLane = road.width / 4;
+                        const possiblePositions = car.type === 'bmw' ? [car.x + car.bmwDirection * oneLane] : Array.from({length: 12}, () => randomRoadX(car.w));
                         const candidates = possiblePositions.filter(x => x >= road.left + 16 && x + car.w <= road.right - 16 && leavesEscape(x, car.w) && !traffic.some(other => other !== car && Math.abs(other.y - car.y) < Math.max(180, (other.h + car.h) / 2 + 45) && Math.abs((other.x + other.w / 2) - (x + car.w / 2)) < (other.w + car.w) / 2 + 20));
                         const changeChance = car.type === 'bmw' ? 1 : Math.min(.75, .3 + level * .035);
                         if (candidates.length && Math.random() < changeChance) { car.targetX = candidates[Math.floor(Math.random() * candidates.length)]; car.changing = true; if (car.type === 'bmw') car.bmwSwitched = true; }
@@ -360,7 +362,7 @@
                 ctx.fillStyle = '#d9d1b0'; ctx.fillRect(road.left - 14, 0, 14, 600); ctx.fillRect(road.right, 0, 14, 600);
                 const asphalt = ctx.createLinearGradient(road.left, 0, road.right, 0); asphalt.addColorStop(0, '#34353c'); asphalt.addColorStop(.5, '#4b4c53'); asphalt.addColorStop(1, '#34353c'); ctx.fillStyle = asphalt; ctx.fillRect(road.left, 0, road.width, 600);
                 ctx.strokeStyle = '#f6e997'; ctx.lineWidth = 5; ctx.setLineDash([45, 55]); ctx.lineDashOffset = roadOffset;
-                [road.left + road.width / 3, road.left + road.width * 2 / 3].forEach(x => { ctx.beginPath(); ctx.moveTo(x, -100); ctx.lineTo(x, 700); ctx.stroke(); }); ctx.setLineDash([]);
+                [1, 2, 3].map(lane => road.left + road.width * lane / 4).forEach(x => { ctx.beginPath(); ctx.moveTo(x, -100); ctx.lineTo(x, 700); ctx.stroke(); }); ctx.setLineDash([]);
                 for (let y = -60 + roadOffset; y < 660; y += 100) { ctx.fillStyle = '#fff'; ctx.fillRect(road.left - 11, y, 8, 34); ctx.fillRect(road.right + 3, y, 8, 34); }
                 traffic.sort((a,b) => a.y - b.y).forEach(car => drawCar(car));
                 ctx.globalAlpha = player.invulnerable > 0 && Math.floor(player.invulnerable * 12) % 2 ? .4 : 1; drawCar(player, true); ctx.globalAlpha = 1;
