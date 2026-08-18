@@ -280,8 +280,7 @@
                 level = 1 + Math.floor(distance / 700);
                 const throttle = keys.has('ArrowUp') || keys.has('KeyW') ? 1.4 : keys.has('ArrowDown') || keys.has('KeyS') ? .6 : 1;
                 const roadSpeed = (380 + Math.min(420, level * 34)) * throttle;
-                const lineSpeed = Math.min(330, roadSpeed * .52);
-                distance += roadSpeed * dt / 10; roadOffset = (roadOffset + lineSpeed * dt) % 100; player.invulnerable -= dt; shake -= dt;
+                distance += roadSpeed * dt / 10; roadOffset = (roadOffset + roadSpeed * dt) % 100; player.invulnerable -= dt; shake -= dt;
                 const steer = (keys.has('ArrowLeft') || keys.has('KeyA') ? -1 : 0) + (keys.has('ArrowRight') || keys.has('KeyD') ? 1 : 0);
                 player.vx += steer * 1900 * dt; player.vx *= Math.pow(.9, dt * 60); player.vx = Math.max(-620, Math.min(620, player.vx)); player.x += player.vx * dt;
                 if (player.x < road.left + 13) { player.x = road.left + 13; player.vx *= -.25; } if (player.x + player.w > road.right - 13) { player.x = road.right - player.w - 13; player.vx *= -.25; }
