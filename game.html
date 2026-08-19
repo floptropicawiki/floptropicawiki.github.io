@@ -17,7 +17,7 @@
         .wiki-header a { display: flex; align-items: center; gap: 12px; color: var(--accent); text-decoration: none; }
         .wiki-header img { width: 46px; height: 46px; border-radius: 6px; }
         .theme-button { border: 1px solid var(--border); border-radius: 999px; background: var(--bg); color: var(--text); padding: 8px 13px; cursor: pointer; font: inherit; }
-        main { width: min(960px, 100%); margin: 0 auto; padding: 26px 16px 50px; }
+        main { width: min(1240px, 100%); margin: 0 auto; padding: 26px 16px 50px; }
         .breadcrumb { color: var(--muted); margin-bottom: 14px; font-size: .9rem; }
         .breadcrumb a { color: var(--accent); text-decoration: none; }
         h1 { font-size: clamp(2rem, 5vw, 3rem); margin-bottom: 6px; }
@@ -93,7 +93,6 @@
             <p class="instructions mobile-only"><strong>Controls:</strong> Use the arrow buttons to steer, speed up, and slow down</p>
             <div class="drive-setup" aria-label="Flop Road setup">
                 <div class="setup-row"><strong>Mode</strong><button class="setup-button active" data-drive-mode="oneway">One Way</button><button class="setup-button" data-drive-mode="twoway">Two Way</button><button class="setup-button" data-drive-mode="time">Time Attack</button><button class="setup-button" data-drive-mode="bomb">Bomb Run</button></div>
-                <div class="setup-row"><strong>Track</strong><button class="setup-button active" data-drive-track="forest">Forest</button><button class="setup-button" data-drive-track="desert">Desert</button><button class="setup-button" data-drive-track="night">Night</button></div>
             </div>
             <section class="game-shell" aria-label="Flop Road driving game">
                 <div class="hud"><span>Score: <b id="driveScore">0</b></span><span>Speed: <b id="driveSpeed">0</b></span><span>Combo: <b id="driveCombo">x1</b></span><span>HP: <b id="driveHp">♥♥♥♥♥</b></span><span>Coins: <b id="driveCoins">0</b>¢</span><span id="driveStatus">One Way</span><button class="fullscreen-button" type="button" aria-label="Toggle Flop Road fullscreen">⛶ Fullscreen</button></div>
@@ -262,7 +261,7 @@
             const images = ['floppfp.png','invader1.png','invader2.png','invader3.png','invader4.png','invader5.png','invader6.png','invader7.png','invader8.png','invader9.png','invader10.png','invader11.png'].map(src => { const image = new Image(); image.src = src; return image; });
             const keys = new Set();
             let player, traffic, particles, scenery, distance, level, hp, high, state, spawnTimer, roadOffset, shake, lastTime, escapeX, escapeTarget, escapeTimer, score, combo, comboTimer, timeLeft, bombTimer, currentRoadSpeed, nextTimeCheckpoint;
-            let driveMode = localStorage.getItem('flop-road-mode') || 'oneway', driveTrack = localStorage.getItem('flop-road-track') || 'forest', coins = Number(localStorage.getItem('flop-road-coins') || 0);
+            let driveMode = localStorage.getItem('flop-road-mode') || 'oneway', coins = Number(localStorage.getItem('flop-road-coins') || 0);
 
             function reset() {
                 player = {x: 414, y: 448, w: 72, h: 118, vx: 0, invulnerable: 1}; traffic = []; particles = [];
@@ -425,7 +424,7 @@
             }
             function render() {
                 const sx = shake > 0 ? (Math.random() - .5) * 12 : 0, sy = shake > 0 ? (Math.random() - .5) * 8 : 0; ctx.save(); ctx.translate(sx, sy);
-                const trackColors = driveTrack === 'desert' ? ['#9a6c32','#d19b4d','#9a6c32'] : driveTrack === 'night' ? ['#071325','#142849','#071325'] : ['#174d2d','#28653b','#174d2d'];
+                const trackColors = ['#174d2d','#28653b','#174d2d'];
                 const grass = ctx.createLinearGradient(0, 0, 1050, 0); grass.addColorStop(0, trackColors[0]); grass.addColorStop(.5, trackColors[1]); grass.addColorStop(1, trackColors[2]); ctx.fillStyle = grass; ctx.fillRect(-20, -10, 1100, 620);
                 scenery.forEach(item => { const x = item.side ? road.right + 45 + (item.size % 30) : road.left - 70 - (item.size % 24); ctx.fillStyle = '#0a2b18'; ctx.beginPath(); ctx.arc(x + 4, item.y + 5, item.size + 3, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = '#3a9350'; ctx.beginPath(); ctx.arc(x, item.y, item.size, 0, Math.PI * 2); ctx.fill(); });
                 ctx.fillStyle = '#d9d1b0'; ctx.fillRect(road.left - 14, 0, 14, 600); ctx.fillRect(road.right, 0, 14, 600);
@@ -445,10 +444,9 @@
             window.addEventListener('keyup', event => keys.delete(event.code)); window.addEventListener('blur', () => { keys.clear(); if (!panel.hidden && state === 'playing') togglePause(); });
             document.querySelectorAll('[data-drive-key]').forEach(button => { const code = button.dataset.driveKey; const press = e => { e.preventDefault(); button.setPointerCapture?.(e.pointerId); keys.add(code); button.classList.add('active'); canvas.focus(); }; const release = e => { e.preventDefault(); keys.delete(code); button.classList.remove('active'); }; button.addEventListener('pointerdown', press); button.addEventListener('pointerup', release); button.addEventListener('pointercancel', release); });
             function updateDriveSetup() {
-                document.querySelectorAll('[data-drive-mode]').forEach(button => button.classList.toggle('active', button.dataset.driveMode === driveMode)); document.querySelectorAll('[data-drive-track]').forEach(button => button.classList.toggle('active', button.dataset.driveTrack === driveTrack));
+                document.querySelectorAll('[data-drive-mode]').forEach(button => button.classList.toggle('active', button.dataset.driveMode === driveMode));
             }
             document.querySelectorAll('[data-drive-mode]').forEach(button => button.addEventListener('click', () => { driveMode = button.dataset.driveMode; localStorage.setItem('flop-road-mode', driveMode); updateDriveSetup(); reset(); }));
-            document.querySelectorAll('[data-drive-track]').forEach(button => button.addEventListener('click', () => { driveTrack = button.dataset.driveTrack; localStorage.setItem('flop-road-track', driveTrack); updateDriveSetup(); reset(); }));
             ui.pause.addEventListener('click', togglePause); ui.restart.addEventListener('click', reset); updateDriveSetup(); reset(); requestAnimationFrame(loop);
         })();
 
