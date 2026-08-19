@@ -117,23 +117,24 @@
             function updateHud() { ui.score.textContent = Math.floor(score); ui.level.textContent = level; ui.round.textContent = `${Math.max(1, round)}/10`; ui.lives.textContent = '♥'.repeat(hp) || '0'; ui.high.textContent = highScore; }
             function rectsOverlap(a, b) { return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y; }
             function imageIndex() { return 1 + Math.floor(Math.random() * (images.length - 1)); }
-            function makeAttack(side, aimed, offset = 0) {
+            function makeAttack(side) {
                 const horizontal = side === 'left' || side === 'right';
                 const beamSize = Math.min(78, 42 + level * 3);
-                const center = aimed ? (horizontal ? player.y + player.h / 2 : player.x + player.w / 2) : (horizontal ? arena.y + 45 + Math.random() * (arena.h - 90) : arena.x + 45 + Math.random() * (arena.w - 90));
-                return {side, horizontal, center: Math.max(horizontal ? arena.y + beamSize / 2 : arena.x + beamSize / 2, Math.min(horizontal ? arena.y + arena.h - beamSize / 2 : arena.x + arena.w - beamSize / 2, center + offset)), size: beamSize, image: imageIndex(), phase: 'warning', timer: Math.max(.7, 1.55 - level * .065), activeTime: Math.min(1.15, .55 + level * .045)};
+                const minimum = horizontal ? arena.y + beamSize / 2 : arena.x + beamSize / 2;
+                const maximum = horizontal ? arena.y + arena.h - beamSize / 2 : arena.x + arena.w - beamSize / 2;
+                return {side, horizontal, center: minimum + Math.random() * (maximum - minimum), size: beamSize, image: imageIndex(), phase: 'warning', timer: Math.max(.7, 1.55 - level * .065), activeTime: Math.min(1.15, .55 + level * .045)};
             }
             function launchPattern() {
                 round++;
                 const sides = ['left', 'right', 'top', 'bottom'];
-                const primary = sides[Math.floor(Math.random() * sides.length)];
-                attacks.push(makeAttack(primary, level >= 2 && Math.random() < .55));
-                if (level >= 2 && Math.random() < .55) attacks.push(makeAttack(sides[(sides.indexOf(primary) + 2) % 4], false, (Math.random() - .5) * 180));
-                if (level >= 4 && Math.random() < .65) {
-                    const perpendicular = primary === 'left' || primary === 'right' ? (Math.random() < .5 ? 'top' : 'bottom') : (Math.random() < .5 ? 'left' : 'right');
-                    attacks.push(makeAttack(perpendicular, Math.random() < .6));
+                const maximum = Math.min(4, 1 + Math.floor((level - 1) / 2));
+                const total = 1 + Math.floor(Math.random() * maximum);
+                let attempts = 0;
+                while (attacks.length < total && attempts < 100) {
+                    attempts++;
+                    const candidate = makeAttack(sides[Math.floor(Math.random() * sides.length)]);
+                    if (!attacks.some(attack => rectsOverlap(beamRect(attack), beamRect(candidate)))) attacks.push(candidate);
                 }
-                if (level >= 7) attacks.push(makeAttack(sides[Math.floor(Math.random() * 4)], false));
                 updateHud();
             }
             function beamRect(attack) { return attack.horizontal ? {x: arena.x, y: attack.center - attack.size / 2, w: arena.w, h: attack.size} : {x: attack.center - attack.size / 2, y: arena.y, w: attack.size, h: arena.h}; }
