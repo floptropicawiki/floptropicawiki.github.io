@@ -347,17 +347,14 @@
                     const leader = leaders[0]; let desiredSpeed = car.worldSpeed;
                     if (leader) desiredSpeed = Math.min(desiredSpeed, (leader.other.currentSpeed ?? leader.other.worldSpeed) + Math.max(0, leader.gap - 115) * .75);
                     const speedResponse = desiredSpeed < car.currentSpeed ? 5.5 : .85; car.currentSpeed += (desiredSpeed - car.currentSpeed) * Math.min(1, dt * speedResponse);
-                    const needsPass = leader && leader.gap < 190 && car.currentSpeed + 15 < car.worldSpeed;
-                    if (needsPass && !car.changing) car.laneCooldown = 0;
                     const relativeSpeed = roadSpeed - car.currentSpeed;
                     car.relativeSpeed = relativeSpeed; car.y += relativeSpeed * dt; car.laneCooldown -= dt;
-                    if (!car.takingExit && car.type !== 'semi' && !(car.type === 'bmw' && car.bmwSwitched) && !car.changing && car.laneCooldown <= 0) {
+                    if (!car.takingExit && car.type === 'bmw' && !car.bmwSwitched && !car.changing && car.laneCooldown <= 0) {
                         const oneLane = road.width / 4;
-                        const possiblePositions = car.type === 'bmw' ? [car.x + car.bmwDirection * oneLane] : Array.from({length: 12}, () => randomRoadX(car.w));
+                        const possiblePositions = [car.x + car.bmwDirection * oneLane];
                         const candidates = possiblePositions.filter(x => x >= road.left + 16 && x + car.w <= road.right - 16 && leavesEscape(x, car.w) && !traffic.some(other => other !== car && Math.abs(other.y - car.y) < Math.max(180, (other.h + car.h) / 2 + 45) && Math.abs((other.x + other.w / 2) - (x + car.w / 2)) < (other.w + car.w) / 2 + 20));
-                        const changeChance = needsPass || car.type === 'bmw' ? 1 : Math.min(.75, .3 + level * .035);
-                        if (candidates.length && Math.random() < changeChance) { car.targetX = candidates[Math.floor(Math.random() * candidates.length)]; car.changing = true; if (car.type === 'bmw') car.bmwSwitched = true; }
-                        car.laneCooldown = car.type === 'bmw' ? .3 + Math.random() * .9 : Math.max(1.8, 5.5 - level * .25) + Math.random() * 6;
+                        if (candidates.length) { car.targetX = candidates[0]; car.changing = true; car.bmwSwitched = true; }
+                        car.laneCooldown = .3 + Math.random() * .9;
                     }
                     const previousX = car.x; car.x += (car.targetX - car.x) * Math.min(1, dt * (car.type === 'bmw' ? 6.5 : 1.7 + level * .025)); car.lateralSpeed = (car.x - previousX) / Math.max(dt, .001);
                     if (car.changing && Math.abs(car.targetX - car.x) < 1) { car.x = car.targetX; car.changing = false; }
