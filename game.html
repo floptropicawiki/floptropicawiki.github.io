@@ -238,18 +238,18 @@
             const road = {left: 165, right: 735, width: 570};
             const images = ['floppfp.png','invader1.png','invader2.png','invader3.png','invader4.png','invader5.png','invader6.png','invader7.png','invader8.png','invader9.png','invader10.png','invader11.png'].map(src => { const image = new Image(); image.src = src; return image; });
             const keys = new Set();
-            let player, traffic, particles, scenery, distance, level, hp, high, state, spawnTimer, roadOffset, shake, lastTime, escapeX, escapeTarget, escapeTimer, gasPhase, gasBlend, gasTimer, nextGas, gasSignY;
+            let player, traffic, particles, scenery, distance, level, hp, high, state, spawnTimer, roadOffset, shake, lastTime, escapeX, escapeTarget, escapeTimer, gasPhase, gasTimer, nextGas;
 
             function reset() {
                 player = {x: 414, y: 448, w: 72, h: 118, vx: 0, invulnerable: 1}; traffic = []; particles = [];
                 scenery = Array.from({length: 16}, (_, i) => ({side: i % 2, y: (i * 83) % 650, size: 16 + Math.random() * 15}));
-                distance = 0; level = 1; hp = 5; high = Number(localStorage.getItem('flop-road-high') || 0); state = 'playing'; spawnTimer = .9; roadOffset = 0; shake = 0; escapeX = 450; escapeTarget = 450; escapeTimer = 3; gasPhase = 'highway'; gasBlend = 0; gasTimer = 0; nextGas = 2800; gasSignY = -110;
+                distance = 0; level = 1; hp = 5; high = Number(localStorage.getItem('flop-road-high') || 0); state = 'playing'; spawnTimer = .9; roadOffset = 0; shake = 0; escapeX = 450; escapeTarget = 450; escapeTimer = 3; gasPhase = 'highway'; gasTimer = 0; nextGas = 2800;
                 ui.restart.classList.remove('show'); ui.pause.textContent = 'Pause'; updateHud(); canvas.focus();
             }
             function updateHud() {
                 ui.score.textContent = Math.floor(distance); ui.level.textContent = level; ui.hp.textContent = `${'♥'.repeat(Math.ceil(hp)) || '0'} ${hp.toFixed(1)}/5`; ui.high.textContent = high;
                 const remaining = Math.max(0, Math.ceil(nextGas - distance));
-                ui.status.textContent = gasPhase === 'stopped' ? `Refueling: ${Math.max(0, gasTimer).toFixed(1)}s` : gasPhase === 'entering' ? 'Optional gas exit' : gasPhase === 'leaving' ? 'Freeway entrance' : `Gas station: ${remaining}m`;
+                ui.status.textContent = gasPhase === 'stopped' ? `Refueling: ${Math.max(0, gasTimer).toFixed(1)}s` : gasPhase === 'entering' ? 'Optional gas exit' : gasPhase === 'onexit' ? 'Driving to Flop Fuel' : gasPhase === 'leaving' ? 'Freeway entrance' : `Gas station: ${remaining}m`;
             }
             function carAngle(car) { return car === player ? Math.max(-.12, Math.min(.12, player.vx / 3900)) : car.type === 'bmw' ? Math.max(-.22, Math.min(.22, (car.targetX - car.x) / 250)) : Math.max(-.1, Math.min(.1, (car.targetX - car.x) / 450)); }
             function hitboxCorners(car) {
@@ -295,28 +295,27 @@
             function update(dt) {
                 if (panel.hidden || state !== 'playing') return;
                 level = 1 + Math.floor(distance / 700);
-                const throttle = keys.has('ArrowUp') || keys.has('KeyW') ? 1.4 : keys.has('ArrowDown') || keys.has('KeyS') ? .6 : 1;
+                const throttle = keys.has('ArrowUp') || keys.has('KeyW') ? 1.75 : keys.has('ArrowDown') || keys.has('KeyS') ? .4 : 1;
                 const cruiseSpeed = (380 + Math.min(420, level * 34)) * throttle;
-                if (gasPhase === 'highway' && distance >= nextGas - 200) { gasPhase = 'approaching'; gasSignY = -110; }
-                if (gasPhase === 'approaching' && distance >= nextGas - 35) { gasPhase = 'entering'; gasBlend = 0; }
+                if (gasPhase === 'highway' && distance >= nextGas - 260) gasPhase = 'approaching';
+                if (gasPhase === 'approaching' && distance >= nextGas - 45) gasPhase = 'entering';
                 if (gasPhase === 'entering') {
-                    gasBlend = Math.min(1, gasBlend + dt / 2.4);
-                    if (player.x > road.right - 12 && gasBlend > .3) { gasPhase = 'stopped'; gasBlend = 1; gasTimer = 3; player.vx = 0; traffic = []; }
-                    else if (distance > nextGas + 80) { gasPhase = 'highway'; gasBlend = 0; nextGas += 2800; }
+                    if (player.x > road.right - 12 && distance >= nextGas - 8) { gasPhase = 'onexit'; traffic = []; }
+                    else if (distance > nextGas + 35) { gasPhase = 'highway'; nextGas += 2800; }
+                } else if (gasPhase === 'onexit') {
+                    if (distance >= nextGas + 60) { gasPhase = 'stopped'; gasTimer = 3; player.vx = 0; }
                 } else if (gasPhase === 'stopped') {
                     gasTimer -= dt; player.vx = 0;
                     if (gasTimer <= 0) { hp = Math.min(5, hp + 1); gasPhase = 'leaving'; updateHud(); }
                 } else if (gasPhase === 'leaving') {
-                    gasBlend = Math.max(0, gasBlend - dt / 2.4);
-                    if (gasBlend <= 0) { player.x = Math.min(player.x, road.right - player.w - 13); gasPhase = 'highway'; nextGas += 2800; spawnTimer = 1.1; }
+                    if (distance >= nextGas + 125) { player.x = Math.min(player.x, road.right - player.w - 13); gasPhase = 'highway'; nextGas += 2800; spawnTimer = 1.1; }
                 }
                 let roadSpeed = cruiseSpeed;
                 if (gasPhase === 'stopped') roadSpeed = 0;
                 distance += roadSpeed * dt / 10; roadOffset = (roadOffset + roadSpeed * dt) % 100; player.invulnerable -= dt; shake -= dt;
-                if (gasPhase === 'approaching') gasSignY += roadSpeed * dt;
                 const steer = (keys.has('ArrowLeft') || keys.has('KeyA') ? -1 : 0) + (keys.has('ArrowRight') || keys.has('KeyD') ? 1 : 0);
-                if (gasPhase !== 'stopped') { player.vx += steer * 1900 * dt; player.vx *= Math.pow(.9, dt * 60); player.vx = Math.max(-620, Math.min(620, player.vx)); player.x += player.vx * dt; }
-                const routeOpen = gasPhase === 'entering' || gasPhase === 'stopped' || gasPhase === 'leaving';
+                if (gasPhase !== 'stopped') { player.vx += steer * 2600 * dt; player.vx *= Math.pow(.9, dt * 60); player.vx = Math.max(-760, Math.min(760, player.vx)); player.x += player.vx * dt; }
+                const routeOpen = gasPhase === 'entering' || gasPhase === 'onexit' || gasPhase === 'stopped' || gasPhase === 'leaving';
                 const rightLimit = routeOpen ? 878 : road.right - 13;
                 if (player.x < road.left + 13) { player.x = road.left + 13; player.vx *= -.25; } if (player.x + player.w > rightLimit) { player.x = rightLimit - player.w; player.vx *= -.25; }
                 escapeTimer -= dt;
@@ -390,23 +389,28 @@
                 ctx.fillStyle = '#ff334f'; ctx.fillRect(car.x + 9, car.y + car.h - 13, 14, 6); ctx.fillRect(car.x + car.w - 23, car.y + car.h - 13, 14, 6); ctx.restore();
             }
             function drawGasStation() {
-                if (gasPhase === 'approaching' && gasSignY > -150 && gasSignY < 650) {
-                    ctx.fillStyle = '#a6a9ad'; ctx.fillRect(789, gasSignY + 83, 7, 78); ctx.fillRect(858, gasSignY + 83, 7, 78);
-                    ctx.fillStyle = '#176b43'; roundRect(755, gasSignY, 140, 88, 6); ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.stroke();
-                    ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.font = '500 20px Fredoka, sans-serif'; ctx.fillText('GAS STATION', 825, gasSignY + 29);
-                    ctx.font = '500 17px Fredoka, sans-serif'; ctx.fillText('200 m', 825, gasSignY + 54); ctx.fillText('EXIT  →', 825, gasSignY + 77);
+                if (gasPhase === 'highway') return;
+                const signY = player.y + (distance - (nextGas - 200)) * 10;
+                const routeY = player.y + (distance - nextGas) * 10;
+                const stationY = routeY - 600;
+                if (signY > -170 && signY < 650) {
+                    ctx.fillStyle = '#a6a9ad'; ctx.fillRect(789, signY + 83, 7, 78); ctx.fillRect(858, signY + 83, 7, 78);
+                    ctx.fillStyle = '#176b43'; roundRect(755, signY, 140, 88, 6); ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.stroke();
+                    ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.font = '500 20px Fredoka, sans-serif'; ctx.fillText('GAS STATION', 825, signY + 29);
+                    ctx.font = '500 17px Fredoka, sans-serif'; ctx.fillText('200 m', 825, signY + 54); ctx.fillText('EXIT  →', 825, signY + 77);
                 }
-                if (gasBlend <= 0) return;
-                ctx.save(); ctx.globalAlpha = gasBlend;
-                ctx.strokeStyle = '#d9d1b0'; ctx.lineWidth = 105; ctx.beginPath(); ctx.moveTo(690, 630); ctx.bezierCurveTo(735, 430, 820, 420, 835, 330); ctx.bezierCurveTo(850, 230, 760, 210, 690, -30); ctx.stroke();
+                ctx.save();
+                ctx.strokeStyle = '#d9d1b0'; ctx.lineWidth = 105; ctx.beginPath(); ctx.moveTo(690, routeY + 80); ctx.bezierCurveTo(730, routeY - 5, 805, routeY - 45, 825, routeY - 130); ctx.lineTo(825, routeY - 1060); ctx.bezierCurveTo(805, routeY - 1140, 735, routeY - 1165, 690, routeY - 1240); ctx.stroke();
                 ctx.strokeStyle = '#44464d'; ctx.lineWidth = 91; ctx.stroke();
                 ctx.strokeStyle = '#f3e69a'; ctx.lineWidth = 4; ctx.setLineDash([26,24]); ctx.lineDashOffset = -roadOffset; ctx.stroke(); ctx.setLineDash([]);
-                ctx.fillStyle = '#f5f5f0'; for (let i = 0; i < 5; i++) { ctx.beginPath(); ctx.moveTo(690 + i * 8, 500 - i * 28); ctx.lineTo(708 + i * 8, 486 - i * 28); ctx.lineTo(699 + i * 8, 486 - i * 28); ctx.lineTo(681 + i * 8, 500 - i * 28); ctx.closePath(); ctx.fill(); }
-                ctx.fillStyle = '#f4efe2'; roundRect(742, 45, 150, 105, 8); ctx.fill(); ctx.fillStyle = '#d83b3b'; ctx.fillRect(742, 45, 150, 25);
-                ctx.fillStyle = '#25252d'; ctx.font = '500 23px Fredoka, sans-serif'; ctx.textAlign = 'center'; ctx.fillText('FLOP FUEL', 817, 105);
-                ctx.fillStyle = '#e7ddc1'; ctx.fillRect(725, 270, 170, 22); ctx.fillStyle = '#d83b3b'; ctx.fillRect(725, 270, 170, 8);
-                [755, 835].forEach(x => { ctx.fillStyle = '#ececec'; roundRect(x, 292, 34, 62, 5); ctx.fill(); ctx.fillStyle = '#26262f'; ctx.fillRect(x + 7, 302, 20, 17); ctx.fillStyle = '#d83b3b'; ctx.fillRect(x + 10, 328, 14, 10); });
-                if (gasPhase === 'stopped') { ctx.fillStyle = '#fff'; ctx.font = '500 22px Fredoka, sans-serif'; ctx.textAlign = 'center'; ctx.fillText(`REFUELING ${Math.max(0, gasTimer).toFixed(1)}s`, 635, 420); }
+                ctx.fillStyle = '#f5f5f0'; for (let i = 0; i < 5; i++) { const y = routeY + 40 - i * 23; ctx.beginPath(); ctx.moveTo(690 + i * 7, y); ctx.lineTo(708 + i * 7, y - 14); ctx.lineTo(699 + i * 7, y - 14); ctx.lineTo(681 + i * 7, y); ctx.closePath(); ctx.fill(); }
+                if (stationY > -380 && stationY < 650) {
+                    ctx.fillStyle = '#f4efe2'; roundRect(742, stationY - 190, 150, 105, 8); ctx.fill(); ctx.fillStyle = '#d83b3b'; ctx.fillRect(742, stationY - 190, 150, 25);
+                    ctx.fillStyle = '#25252d'; ctx.font = '500 23px Fredoka, sans-serif'; ctx.textAlign = 'center'; ctx.fillText('FLOP FUEL', 817, stationY - 130);
+                    ctx.fillStyle = '#e7ddc1'; ctx.fillRect(725, stationY - 45, 170, 22); ctx.fillStyle = '#d83b3b'; ctx.fillRect(725, stationY - 45, 170, 8);
+                    [755, 835].forEach(x => { ctx.fillStyle = '#ececec'; roundRect(x, stationY - 23, 34, 62, 5); ctx.fill(); ctx.fillStyle = '#26262f'; ctx.fillRect(x + 7, stationY - 13, 20, 17); ctx.fillStyle = '#d83b3b'; ctx.fillRect(x + 10, stationY + 13, 14, 10); });
+                }
+                if (gasPhase === 'stopped') { ctx.fillStyle = '#fff'; ctx.font = '500 22px Fredoka, sans-serif'; ctx.textAlign = 'center'; ctx.fillText(`REFUELING ${Math.max(0, gasTimer).toFixed(1)}s`, 625, 420); }
                 ctx.restore();
             }
             function render() {
