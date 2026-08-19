@@ -238,12 +238,12 @@
             const road = {left: 165, right: 735, width: 570};
             const images = ['floppfp.png','invader1.png','invader2.png','invader3.png','invader4.png','invader5.png','invader6.png','invader7.png','invader8.png','invader9.png','invader10.png','invader11.png'].map(src => { const image = new Image(); image.src = src; return image; });
             const keys = new Set();
-            let player, traffic, particles, scenery, distance, level, hp, high, state, spawnTimer, roadOffset, shake, lastTime, escapeX, escapeTarget, escapeTimer, gasPhase, gasTimer, nextGas;
+            let player, traffic, particles, scenery, distance, level, hp, high, state, spawnTimer, roadOffset, shake, lastTime, escapeX, escapeTarget, escapeTimer, gasPhase, gasTimer, nextGas, cameraX;
 
             function reset() {
                 player = {x: 414, y: 448, w: 72, h: 118, vx: 0, invulnerable: 1}; traffic = []; particles = [];
                 scenery = Array.from({length: 16}, (_, i) => ({side: i % 2, y: (i * 83) % 650, size: 16 + Math.random() * 15}));
-                distance = 0; level = 1; hp = 5; high = Number(localStorage.getItem('flop-road-high') || 0); state = 'playing'; spawnTimer = .9; roadOffset = 0; shake = 0; escapeX = 450; escapeTarget = 450; escapeTimer = 3; gasPhase = 'highway'; gasTimer = 0; nextGas = 2800;
+                distance = 0; level = 1; hp = 5; high = Number(localStorage.getItem('flop-road-high') || 0); state = 'playing'; spawnTimer = .9; roadOffset = 0; shake = 0; escapeX = 450; escapeTarget = 450; escapeTimer = 3; gasPhase = 'highway'; gasTimer = 0; nextGas = 2800; cameraX = 0;
                 ui.restart.classList.remove('show'); ui.pause.textContent = 'Pause'; updateHud(); canvas.focus();
             }
             function updateHud() {
@@ -300,9 +300,12 @@
                 const throttle = keys.has('ArrowUp') || keys.has('KeyW') ? 1.75 : keys.has('ArrowDown') || keys.has('KeyS') ? .4 : 1;
                 const cruiseSpeed = (315 + Math.min(360, level * 28)) * throttle;
                 if (gasPhase === 'highway' && distance >= nextGas - 260) gasPhase = 'approaching';
-                if (gasPhase === 'approaching' && distance >= nextGas - 45) gasPhase = 'entering';
+                if (gasPhase === 'approaching' && distance >= nextGas - 45) {
+                    gasPhase = 'entering';
+                    traffic.forEach(car => { if (car.x + car.w / 2 > road.right - road.width / 4) { car.takingExit = true; car.targetX = 810; car.changing = true; } });
+                }
                 if (gasPhase === 'entering') {
-                    if (player.x > road.right - 12 && distance >= nextGas - 8) { gasPhase = 'onexit'; traffic = []; }
+                    if (player.x > road.right - 12 && distance >= nextGas - 8) gasPhase = 'onexit';
                     else if (distance > nextGas + 35) { gasPhase = 'highway'; nextGas += 2800; }
                 } else if (gasPhase === 'onexit') {
                     if (distance >= nextGas + 60) { gasPhase = 'stopped'; gasTimer = 3; player.vx = 0; }
@@ -310,7 +313,9 @@
                     gasTimer -= dt; player.vx = 0;
                     if (gasTimer <= 0) { hp = Math.min(5, hp + 1); gasPhase = 'leaving'; updateHud(); }
                 } else if (gasPhase === 'leaving') {
-                    if (distance >= nextGas + 125) { player.x = Math.min(player.x, road.right - player.w - 13); gasPhase = 'highway'; nextGas += 2800; spawnTimer = 1.1; }
+                    if (distance >= nextGas + 95) traffic.forEach(car => { if (car.takingExit) { car.targetX = road.right - road.width / 8 - car.w / 2; car.changing = true; } });
+                    if (distance >= nextGas + 125 && player.x <= road.right - player.w - 13) { gasPhase = 'highway'; nextGas += 2800; spawnTimer = 1.1; }
+                    else if (distance >= nextGas + 145) { player.x = road.right - player.w - 13; gasPhase = 'highway'; nextGas += 2800; spawnTimer = 1.1; }
                 }
                 let roadSpeed = cruiseSpeed;
                 if (gasPhase === 'stopped') roadSpeed = 0;
@@ -320,6 +325,8 @@
                 const routeOpen = gasPhase === 'entering' || gasPhase === 'onexit' || gasPhase === 'stopped' || gasPhase === 'leaving';
                 const rightLimit = routeOpen ? 878 : road.right - 13;
                 if (player.x < road.left + 13) { player.x = road.left + 13; player.vx *= -.25; } if (player.x + player.w > rightLimit) { player.x = rightLimit - player.w; player.vx *= -.25; }
+                let cameraTarget = gasPhase === 'onexit' || gasPhase === 'stopped' ? 150 : gasPhase === 'entering' ? Math.max(0, Math.min(150, (player.x - 610) * 1.25)) : gasPhase === 'leaving' ? 150 * Math.max(0, Math.min(1, (nextGas + 145 - distance) / 35)) : 0;
+                cameraX += (cameraTarget - cameraX) * Math.min(1, dt * 2.8);
                 escapeTimer -= dt;
                 if (escapeTimer <= 0) {
                     const openings = Array.from({length: 16}, () => road.left + 70 + Math.random() * (road.width - 140)).filter(x => !traffic.some(car => car.y < player.y + 50 && car.x < x + 52 && car.x + car.w > x - 52));
@@ -337,7 +344,7 @@
                 traffic.forEach(car => {
                     const relativeSpeed = roadSpeed - car.worldSpeed;
                     car.relativeSpeed = relativeSpeed; car.y += relativeSpeed * dt; car.laneCooldown -= dt;
-                    if (car.type !== 'semi' && !(car.type === 'bmw' && car.bmwSwitched) && !car.changing && car.laneCooldown <= 0) {
+                    if (!car.takingExit && car.type !== 'semi' && !(car.type === 'bmw' && car.bmwSwitched) && !car.changing && car.laneCooldown <= 0) {
                         const oneLane = road.width / 4;
                         const possiblePositions = car.type === 'bmw' ? [car.x + car.bmwDirection * oneLane] : Array.from({length: 12}, () => randomRoadX(car.w));
                         const candidates = possiblePositions.filter(x => x >= road.left + 16 && x + car.w <= road.right - 16 && leavesEscape(x, car.w) && !traffic.some(other => other !== car && Math.abs(other.y - car.y) < Math.max(180, (other.h + car.h) / 2 + 45) && Math.abs((other.x + other.w / 2) - (x + car.w / 2)) < (other.w + car.w) / 2 + 20));
@@ -404,7 +411,7 @@
                 ctx.save();
                 ctx.strokeStyle = '#d9d1b0'; ctx.lineWidth = 105; ctx.beginPath(); ctx.moveTo(690, routeY + 80); ctx.bezierCurveTo(730, routeY - 5, 805, routeY - 45, 825, routeY - 130); ctx.lineTo(825, routeY - 1060); ctx.bezierCurveTo(805, routeY - 1140, 735, routeY - 1165, 690, routeY - 1240); ctx.stroke();
                 ctx.strokeStyle = '#44464d'; ctx.lineWidth = 91; ctx.stroke();
-                ctx.strokeStyle = '#f3e69a'; ctx.lineWidth = 4; ctx.setLineDash([26,24]); ctx.lineDashOffset = -roadOffset; ctx.stroke(); ctx.setLineDash([]);
+                ctx.strokeStyle = '#f3e69a'; ctx.lineWidth = 4; ctx.setLineDash([26,24]); ctx.lineDashOffset = 0; ctx.stroke(); ctx.setLineDash([]);
                 ctx.fillStyle = '#f5f5f0'; for (let i = 0; i < 5; i++) { const y = routeY + 40 - i * 23; ctx.beginPath(); ctx.moveTo(690 + i * 7, y); ctx.lineTo(708 + i * 7, y - 14); ctx.lineTo(699 + i * 7, y - 14); ctx.lineTo(681 + i * 7, y); ctx.closePath(); ctx.fill(); }
                 if (stationY > -380 && stationY < 650) {
                     ctx.fillStyle = '#f4efe2'; roundRect(742, stationY - 190, 150, 105, 8); ctx.fill(); ctx.fillStyle = '#d83b3b'; ctx.fillRect(742, stationY - 190, 150, 25);
@@ -416,8 +423,8 @@
                 ctx.restore();
             }
             function render() {
-                const sx = shake > 0 ? (Math.random() - .5) * 12 : 0, sy = shake > 0 ? (Math.random() - .5) * 8 : 0; ctx.save(); ctx.translate(sx, sy);
-                const grass = ctx.createLinearGradient(0, 0, 900, 0); grass.addColorStop(0, '#174d2d'); grass.addColorStop(.5, '#28653b'); grass.addColorStop(1, '#174d2d'); ctx.fillStyle = grass; ctx.fillRect(-10, -10, 920, 620);
+                const sx = shake > 0 ? (Math.random() - .5) * 12 : 0, sy = shake > 0 ? (Math.random() - .5) * 8 : 0; ctx.save(); ctx.translate(sx - cameraX, sy);
+                const grass = ctx.createLinearGradient(0, 0, 1050, 0); grass.addColorStop(0, '#174d2d'); grass.addColorStop(.5, '#28653b'); grass.addColorStop(1, '#174d2d'); ctx.fillStyle = grass; ctx.fillRect(-20, -10, 1100, 620);
                 scenery.forEach(item => { const x = item.side ? road.right + 45 + (item.size % 30) : road.left - 70 - (item.size % 24); ctx.fillStyle = '#0a2b18'; ctx.beginPath(); ctx.arc(x + 4, item.y + 5, item.size + 3, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = '#3a9350'; ctx.beginPath(); ctx.arc(x, item.y, item.size, 0, Math.PI * 2); ctx.fill(); });
                 ctx.fillStyle = '#d9d1b0'; ctx.fillRect(road.left - 14, 0, 14, 600); ctx.fillRect(road.right, 0, 14, 600);
                 const asphalt = ctx.createLinearGradient(road.left, 0, road.right, 0); asphalt.addColorStop(0, '#34353c'); asphalt.addColorStop(.5, '#4b4c53'); asphalt.addColorStop(1, '#34353c'); ctx.fillStyle = asphalt; ctx.fillRect(road.left, 0, road.width, 600);
