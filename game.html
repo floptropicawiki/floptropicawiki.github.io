@@ -133,11 +133,15 @@
                 while (attacks.length < total && attempts < 100) {
                     attempts++;
                     const candidate = makeAttack(sides[Math.floor(Math.random() * sides.length)]);
-                    if (!attacks.some(attack => rectsOverlap(beamRect(attack), beamRect(candidate)))) attacks.push(candidate);
+                    if (!attacks.some(attack => rectsOverlap(emitterRect(attack, 6), emitterRect(candidate, 6)))) attacks.push(candidate);
                 }
                 updateHud();
             }
             function beamRect(attack) { return attack.horizontal ? {x: arena.x, y: attack.center - attack.size / 2, w: arena.w, h: attack.size} : {x: attack.center - attack.size / 2, y: arena.y, w: attack.size, h: arena.h}; }
+            function emitterRect(attack, padding = 0) {
+                const beam = beamRect(attack), rect = attack.horizontal ? {x: attack.side === 'left' ? arena.x - 56 : arena.x + arena.w + 8, y: beam.y, w: 48, h: beam.h} : {x: beam.x, y: attack.side === 'top' ? arena.y - 56 : arena.y + arena.h + 8, w: beam.w, h: 48};
+                return {x: rect.x - padding, y: rect.y - padding, w: rect.w + padding * 2, h: rect.h + padding * 2};
+            }
             function dash() { if (state !== 'playing' || player.dashCooldown > 0) return; player.dash = .2; player.dashCooldown = Math.max(1.25, 2.5 - level * .04); player.invulnerable = Math.max(player.invulnerable, .25); burst(player.x + 22, player.y + 22, '#7ee7ff'); }
             function burst(x, y, color) { for (let i = 0; i < 16; i++) particles.push({x, y, vx: (Math.random() - .5) * 220, vy: (Math.random() - .5) * 220, life: .65, color}); }
             function hitPlayer() {
