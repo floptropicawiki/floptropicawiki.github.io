@@ -262,15 +262,17 @@
             }
             function randomRoadX(width = 72) { return road.left + 16 + Math.random() * (road.width - width - 32); }
             function leavesEscape(x, width) { return x + width < escapeX - 48 || x > escapeX + 48; }
-            function spawnCar() {
+            function spawnCar(playerSpeed) {
                 const roll = Math.random(), type = roll < .06 ? 'bmw' : roll < .105 ? 'semi' : Math.random() < Math.max(.5, .8 - level * .025) ? 'forward' : 'stopped';
                 const width = type === 'semi' ? 88 : 72, height = type === 'semi' ? 176 : 116;
-                const candidates = Array.from({length: 18}, () => randomRoadX(width)).filter(x => leavesEscape(x, width) && !traffic.some(car => car.y < 235 && Math.abs((car.x + car.w / 2) - (x + width / 2)) < (car.w + width) / 2 + 18));
+                const worldSpeed = type === 'bmw' ? 345 + Math.random() * 105 : type === 'semi' ? 190 + Math.random() * 65 : type === 'forward' ? 235 + Math.random() * 115 + Math.min(70, level * 4) : 0;
+                const spawnY = worldSpeed > playerSpeed + 20 ? 640 + Math.random() * 100 : -height - 20;
+                const candidates = Array.from({length: 18}, () => randomRoadX(width)).filter(x => leavesEscape(x, width) && !traffic.some(car => Math.abs((car.y + car.h / 2) - (spawnY + height / 2)) < (car.h + height) / 2 + 55 && Math.abs((car.x + car.w / 2) - (x + width / 2)) < (car.w + width) / 2 + 18));
                 if (!candidates.length) return;
                 const x = candidates[Math.floor(Math.random() * candidates.length)];
                 const laneWidth = road.width / 4, lane = Math.max(0, Math.min(3, Math.floor((x + width / 2 - road.left) / laneWidth)));
                 const bmwDirection = lane === 0 ? 1 : lane === 3 ? -1 : Math.random() < .5 ? -1 : 1;
-                traffic.push({x, targetX: x, y: -height - 20, w: width, h: height, type, lane, bmwDirection, changing: false, bmwSwitched: false, laneCooldown: type === 'bmw' ? .3 + Math.random() * .8 : Math.max(1.8, 4 - level * .12) + Math.random() * 7, image: 1 + Math.floor(Math.random() * (images.length - 1))});
+                traffic.push({x, targetX: x, y: spawnY, w: width, h: height, type, worldSpeed, lane, bmwDirection, changing: false, bmwSwitched: false, laneCooldown: type === 'bmw' ? .3 + Math.random() * .8 : Math.max(1.8, 4 - level * .12) + Math.random() * 7, image: 1 + Math.floor(Math.random() * (images.length - 1))});
             }
             function sparks(x, y, color) { for (let i = 0; i < 22; i++) particles.push({x, y, vx: (Math.random() - .5) * 260, vy: (Math.random() - .5) * 260, life: .8, color}); }
             function collisionDamage(car) {
@@ -296,7 +298,7 @@
                 if (panel.hidden || state !== 'playing') return;
                 level = 1 + Math.floor(distance / 700);
                 const throttle = keys.has('ArrowUp') || keys.has('KeyW') ? 1.75 : keys.has('ArrowDown') || keys.has('KeyS') ? .4 : 1;
-                const cruiseSpeed = (380 + Math.min(420, level * 34)) * throttle;
+                const cruiseSpeed = (315 + Math.min(360, level * 28)) * throttle;
                 if (gasPhase === 'highway' && distance >= nextGas - 260) gasPhase = 'approaching';
                 if (gasPhase === 'approaching' && distance >= nextGas - 45) gasPhase = 'entering';
                 if (gasPhase === 'entering') {
@@ -328,12 +330,12 @@
                 if (!traffic.some(car => car.y < player.y + 50 && car.x < nextEscape + 52 && car.x + car.w > nextEscape - 52)) escapeX = nextEscape;
                 spawnTimer -= dt;
                 if ((gasPhase === 'highway' || gasPhase === 'approaching') && spawnTimer <= 0) {
-                    spawnCar();
-                    if (level >= 4 && Math.random() < Math.min(.38, level * .035)) spawnCar();
+                    spawnCar(roadSpeed);
+                    if (level >= 4 && Math.random() < Math.min(.38, level * .035)) spawnCar(roadSpeed);
                     spawnTimer = Math.max(.22, .92 - level * .055) * (.68 + Math.random() * .48);
                 }
                 traffic.forEach(car => {
-                    const relativeSpeed = car.type === 'bmw' ? Math.max(125, roadSpeed - 205) : car.type === 'semi' ? roadSpeed * .96 : car.type === 'forward' ? Math.max(175, roadSpeed - Math.max(42, 110 - level * 5)) : roadSpeed * (1.08 + Math.min(.18, level * .012));
+                    const relativeSpeed = roadSpeed - car.worldSpeed;
                     car.relativeSpeed = relativeSpeed; car.y += relativeSpeed * dt; car.laneCooldown -= dt;
                     if (car.type !== 'semi' && !(car.type === 'bmw' && car.bmwSwitched) && !car.changing && car.laneCooldown <= 0) {
                         const oneLane = road.width / 4;
@@ -354,7 +356,7 @@
                         if (centerA < centerB) a.y = centerB - separation - a.h / 2; else b.y = centerA - separation - b.h / 2;
                     }
                 }
-                traffic = traffic.filter(car => !car.dead && car.y < 720);
+                traffic = traffic.filter(car => !car.dead && car.y < 820 && car.y + car.h > -260);
                 scenery.forEach(item => { item.y += roadSpeed * dt; if (item.y > 650) { item.y -= 720; item.size = 16 + Math.random() * 15; } });
                 particles.forEach(p => { p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= .97; p.vy *= .97; p.life -= dt; }); particles = particles.filter(p => p.life > 0);
                 if (distance > high) high = Math.floor(distance); updateHud();
