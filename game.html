@@ -193,10 +193,6 @@
                     ctx.save(); ctx.fillStyle = '#ff214f'; ctx.globalAlpha = .65 + pulse * .35;
                     if (attack.horizontal) ctx.fillRect(attack.side === 'left' ? arena.x - 56 : arena.x + arena.w + 8, rect.y, 48, rect.h);
                     else ctx.fillRect(rect.x, attack.side === 'top' ? arena.y - 56 : arena.y + arena.h + 8, rect.w, 48);
-                    if (level >= 7) {
-                        ctx.globalAlpha = Math.floor(performance.now() / 110) % 2 ? .95 : .18; ctx.strokeStyle = '#ff315b'; ctx.lineWidth = 4; ctx.setLineDash([16, 10]);
-                        ctx.beginPath(); if (attack.horizontal) { ctx.moveTo(arena.x, attack.center); ctx.lineTo(arena.x + arena.w, attack.center); } else { ctx.moveTo(attack.center, arena.y); ctx.lineTo(attack.center, arena.y + arena.h); } ctx.stroke(); ctx.setLineDash([]);
-                    }
                     const marker = attack.horizontal ? {x: attack.side === 'left' ? arena.x - 52 : arena.x + arena.w + 12, y: attack.center - 20, w: 40, h: 40} : {x: attack.center - 20, y: attack.side === 'top' ? arena.y - 52 : arena.y + arena.h + 12, w: 40, h: 40};
                     drawImage(image, marker); ctx.restore(); return;
                 }
