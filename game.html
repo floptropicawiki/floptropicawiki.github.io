@@ -249,7 +249,7 @@
             function updateHud() {
                 ui.score.textContent = Math.floor(distance); ui.level.textContent = level; ui.hp.textContent = `${'♥'.repeat(Math.ceil(hp)) || '0'} ${hp.toFixed(1)}/5`; ui.high.textContent = high;
                 const remaining = Math.max(0, Math.ceil(nextGas - distance));
-                ui.status.textContent = gasPhase === 'stopped' ? `Refueling: ${Math.max(0, gasTimer).toFixed(1)}s` : gasPhase === 'entering' ? 'Optional gas exit' : gasPhase === 'onexit' ? 'Driving to Flop Fuel' : gasPhase === 'leaving' ? 'Freeway entrance' : `Gas station: ${remaining}m`;
+                ui.status.textContent = gasPhase === 'stopped' ? `Refueling: ${Math.max(0, gasTimer).toFixed(1)}s` : gasPhase === 'entering' ? 'Optional gas exit' : gasPhase === 'onexit' ? 'Driving to Flop Fuel' : gasPhase === 'leaving' ? 'Freeway entrance' : gasPhase === 'passing' ? 'Passing Flop Fuel' : `Gas station: ${remaining}m`;
             }
             function carAngle(car) { return car === player ? Math.max(-.12, Math.min(.12, player.vx / 3900)) : car.type === 'bmw' ? Math.max(-.22, Math.min(.22, (car.targetX - car.x) / 250)) : Math.max(-.1, Math.min(.1, (car.targetX - car.x) / 450)); }
             function hitboxCorners(car) {
@@ -294,6 +294,11 @@
                 updateHud();
             }
             function togglePause() { if (state === 'playing') state = 'paused'; else if (state === 'paused') state = 'playing'; ui.pause.textContent = state === 'paused' ? 'Resume' : 'Pause'; }
+            function passStation(forceMerge = false) {
+                if (forceMerge) player.x = road.right - player.w - 13;
+                traffic.forEach(car => { if (car.takingExit) { car.targetX = road.right - road.width / 8 - car.w / 2; car.changing = true; } });
+                gasPhase = 'passing'; spawnTimer = 1.1;
+            }
 
             function update(dt) {
                 if (panel.hidden || state !== 'playing') return;
@@ -307,7 +312,7 @@
                 if (gasPhase === 'entering') {
                     if (distance >= nextGas - 18) traffic.forEach(car => { if (!car.takingExit && car.x + car.w / 2 > road.right - road.width / 4) { car.takingExit = true; car.targetX = 810; car.changing = true; } });
                     if (player.x > road.right - 12 && distance >= nextGas - 18) gasPhase = 'onexit';
-                    else if (distance > nextGas + 100) { gasPhase = 'highway'; nextGas += 2800; }
+                    else if (distance > nextGas + 100) passStation();
                 } else if (gasPhase === 'onexit') {
                     if (distance >= nextGas + 60) { gasPhase = 'stopped'; gasTimer = 3; player.vx = 0; }
                 } else if (gasPhase === 'stopped') {
@@ -315,8 +320,10 @@
                     if (gasTimer <= 0) { hp = Math.min(5, hp + 1); gasPhase = 'leaving'; updateHud(); }
                 } else if (gasPhase === 'leaving') {
                     if (distance >= nextGas + 70) traffic.forEach(car => { if (car.takingExit) { car.targetX = road.right - road.width / 8 - car.w / 2; car.changing = true; } });
-                    if (distance >= nextGas + 70 && player.x <= road.right - player.w - 13) { gasPhase = 'highway'; nextGas += 2800; spawnTimer = 1.1; }
-                    else if (distance >= nextGas + 145) { player.x = road.right - player.w - 13; gasPhase = 'highway'; nextGas += 2800; spawnTimer = 1.1; }
+                    if (distance >= nextGas + 70 && player.x <= road.right - player.w - 13) passStation();
+                    else if (distance >= nextGas + 145) passStation(true);
+                } else if (gasPhase === 'passing' && distance >= nextGas + 170) {
+                    gasPhase = 'highway'; nextGas += 2800;
                 }
                 let roadSpeed = cruiseSpeed;
                 if (gasPhase === 'stopped') roadSpeed = 0;
@@ -337,7 +344,7 @@
                 const escapeStep = Math.sign(escapeTarget - escapeX) * Math.min(Math.abs(escapeTarget - escapeX), 42 * dt), nextEscape = escapeX + escapeStep;
                 if (!traffic.some(car => car.y < player.y + 50 && car.x < nextEscape + 52 && car.x + car.w > nextEscape - 52)) escapeX = nextEscape;
                 spawnTimer -= dt;
-                if ((gasPhase === 'highway' || gasPhase === 'approaching') && spawnTimer <= 0) {
+                if ((gasPhase === 'highway' || gasPhase === 'approaching' || gasPhase === 'passing') && spawnTimer <= 0) {
                     spawnCar(roadSpeed);
                     if (level >= 4 && Math.random() < Math.min(.38, level * .035)) spawnCar(roadSpeed);
                     spawnTimer = Math.max(.22, .92 - level * .055) * (.68 + Math.random() * .48);
