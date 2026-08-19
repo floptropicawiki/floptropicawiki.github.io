@@ -31,12 +31,17 @@
         .hud { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding: 11px 16px; background: #121222; color: #fff; font-weight: 500; }
         .fullscreen-button { border: 1px solid #56566d; border-radius: 6px; background: #27273b; color: #fff; padding: 3px 9px; font: 500 .85rem 'Fredoka', sans-serif; cursor: pointer; }
         canvas { display: block; width: 100%; height: auto; aspect-ratio: 3 / 2; background: #050510; touch-action: none; }
-        .controls { display: grid; grid-template-columns: repeat(3, 58px) 1fr 88px; gap: 8px; align-items: center; padding: 12px; background: #121222; }
+        .mobile-only, .controls { display: none; }
+        .controls { grid-template-columns: repeat(3, 58px) 1fr 88px; gap: 8px; align-items: center; padding: 12px; background: #121222; }
         .control { min-height: 48px; border: 1px solid #52526a; border-radius: 9px; background: #24243a; color: white; font: 500 1.1rem 'Fredoka', sans-serif; cursor: pointer; user-select: none; touch-action: none; }
         .control:active, .control.active { background: var(--accent); color: #111; }
         .up { grid-column: 2; grid-row: 1; } .left { grid-column: 1; grid-row: 2; } .down { grid-column: 2; grid-row: 2; } .right { grid-column: 3; grid-row: 2; }
         .fire { grid-column: 5; grid-row: 1 / 3; height: 100%; background: #9e2638; border-color: #e15d72; }
         .pause { grid-column: 4; grid-row: 1 / 3; justify-self: end; padding: 0 20px; }
+        .boss-touch-controls { grid-template-columns: 1fr minmax(92px, 130px) minmax(92px, 130px); }
+        .boss-touch-controls .touch-help { grid-column: 1; color: #c6c6d4; padding-left: 4px; line-height: 1.25; }
+        .boss-touch-controls .pause { grid-column: 2; grid-row: 1; justify-self: stretch; }
+        .boss-touch-controls .fire { grid-column: 3; grid-row: 1; min-height: 58px; }
         .game-actions { text-align: center; margin-top: 18px; }
         .restart { display: none; border: 0; border-radius: 8px; background: var(--accent); color: #111; padding: 11px 20px; font: 500 1rem 'Fredoka', sans-serif; cursor: pointer; }
         .restart.show { display: inline-block; }
@@ -45,7 +50,7 @@
         .game-shell:fullscreen .hud, .game-shell:fullscreen .controls { flex: none; }
         footer { text-align: center; border-top: 1px solid var(--border); padding: 25px; color: var(--muted); }
         footer a { color: var(--accent); text-decoration: none; }
-        @media (min-width: 760px) { .controls { display: none; } }
+        @media (hover: none), (pointer: coarse) { .mobile-only { display: block; } .desktop-only { display: none; } .controls.mobile-only { display: grid; } }
         @media (max-width: 520px) { .wiki-header h2 { font-size: 1.1rem; } .hud { font-size: .85rem; padding: 9px; } main { padding-inline: 8px; } }
     </style>
 </head>
@@ -63,15 +68,13 @@
         </nav>
         <div class="tab-panel" id="bossPanel">
         <h2 class="game-heading">Flop Boss Fight</h2>
-        <p class="instructions"><strong>Controls:</strong> Arrow keys or WASD to move · Space to dash · P to pause · Enter to restart</p>
+        <p class="instructions desktop-only"><strong>Controls:</strong> Arrow keys or WASD to move · Space to dash · P to pause · Enter to restart</p>
+        <p class="instructions mobile-only"><strong>Controls:</strong> Tap or drag inside the battle box to move · Tap Dash to dodge</p>
         <section class="game-shell" aria-label="Flop Boss Fight game">
             <div class="hud"><span>Score: <b id="score">0</b></span><span>Level: <b id="level">1</b></span><span>Round: <b id="round">1/10</b></span><span>HP: <b id="lives">3</b></span><span>High: <b id="highScore">0</b></span><button class="fullscreen-button" type="button" aria-label="Toggle boss fight fullscreen">⛶ Fullscreen</button></div>
-            <canvas id="game" width="900" height="600" tabindex="0" aria-label="Use arrow keys to move and Space to dash"></canvas>
-            <div class="controls" aria-label="Touch controls">
-                <button class="control up" data-key="ArrowUp" aria-label="Move up">▲</button>
-                <button class="control left" data-key="ArrowLeft" aria-label="Move left">◀</button>
-                <button class="control down" data-key="ArrowDown" aria-label="Move down">▼</button>
-                <button class="control right" data-key="ArrowRight" aria-label="Move right">▶</button>
+            <canvas id="game" width="900" height="600" tabindex="0" aria-label="Move with keyboard or by dragging on touch screens"></canvas>
+            <div class="controls mobile-only boss-touch-controls" aria-label="Boss fight touch controls">
+                <span class="touch-help">Drag in the battle box to move</span>
                 <button class="control pause" id="pauseButton" aria-label="Pause game">Pause</button>
                 <button class="control fire" data-key="Space" aria-label="Dash">Dash</button>
             </div>
@@ -81,11 +84,12 @@
 
         <div class="tab-panel" id="drivePanel" hidden>
             <h2 class="game-heading">Flop Road</h2>
-            <p class="instructions"><strong>Controls:</strong> Left/Right or A/D to steer · Up/W to speed up · Down/S to slow down · P to pause · Enter to restart</p>
+            <p class="instructions desktop-only"><strong>Controls:</strong> Left/Right or A/D to steer · Up/W to speed up · Down/S to slow down · P to pause · Enter to restart</p>
+            <p class="instructions mobile-only"><strong>Controls:</strong> Use the arrow buttons to steer, speed up, and slow down</p>
             <section class="game-shell" aria-label="Flop Road driving game">
                 <div class="hud"><span>Distance: <b id="driveScore">0</b>m</span><span>Level: <b id="driveLevel">1</b></span><span>HP: <b id="driveHp">♥♥♥♥♥</b></span><span id="driveStatus">Gas: 100m</span><span>Best: <b id="driveHigh">0</b>m</span><button class="fullscreen-button" type="button" aria-label="Toggle Flop Road fullscreen">⛶ Fullscreen</button></div>
                 <canvas id="driveGame" width="900" height="600" tabindex="0" aria-label="Use left and right keys to steer around traffic"></canvas>
-                <div class="controls" aria-label="Driving touch controls">
+                <div class="controls mobile-only" aria-label="Driving touch controls">
                     <button class="control up" data-drive-key="ArrowUp" aria-label="Speed up">▲</button>
                     <button class="control left" data-drive-key="ArrowLeft" aria-label="Steer left">◀</button>
                     <button class="control down" data-drive-key="ArrowDown" aria-label="Slow down">▼</button>
@@ -106,12 +110,12 @@
             const imageFiles = ['floppfp.png', 'invader1.png', 'invader2.png', 'invader3.png', 'invader4.png', 'invader5.png', 'invader6.png', 'invader7.png', 'invader8.png', 'invader9.png', 'invader10.png', 'invader11.png'];
             const images = imageFiles.map(src => { const image = new Image(); image.src = src; return image; });
             const keys = new Set(), stars = Array.from({length: 90}, () => ({x: Math.random() * 900, y: Math.random() * 600, r: Math.random() * 1.8 + .2}));
-            let player, attacks, particles, level, round, hp, score, highScore, attackTimer, intermission, state, lastTime;
+            let player, attacks, particles, level, round, hp, score, highScore, attackTimer, intermission, state, lastTime, touchTarget, touchPointer;
 
             function resetGame() {
                 level = 1; hp = 3; score = 0; highScore = Number(localStorage.getItem('flop-boss-high') || 0);
                 player = {x: 423, y: 425, w: 44, h: 44, speed: 255, invulnerable: 1.2, dash: 0, dashCooldown: 0};
-                attacks = []; particles = []; state = 'playing'; intermission = 0; ui.restart.classList.remove('show'); startLevel(); canvas.focus();
+                attacks = []; particles = []; touchTarget = null; touchPointer = null; state = 'playing'; intermission = 0; ui.restart.classList.remove('show'); startLevel(); canvas.focus();
             }
             function startLevel() { round = 0; attackTimer = 1.6; attacks = []; updateHud(); }
             function updateHud() { ui.score.textContent = Math.floor(score); ui.level.textContent = level; ui.round.textContent = `${Math.max(1, round)}/10`; ui.lives.textContent = '♥'.repeat(hp) || '0'; ui.high.textContent = highScore; }
@@ -159,6 +163,7 @@
                 let dx = 0, dy = 0;
                 if (keys.has('ArrowLeft') || keys.has('KeyA')) dx--; if (keys.has('ArrowRight') || keys.has('KeyD')) dx++;
                 if (keys.has('ArrowUp') || keys.has('KeyW')) dy--; if (keys.has('ArrowDown') || keys.has('KeyS')) dy++;
+                if (touchTarget) { const tx = touchTarget.x - (player.x + player.w / 2), ty = touchTarget.y - (player.y + player.h / 2), distanceToTouch = Math.hypot(tx, ty); if (distanceToTouch > 5) { dx = tx / distanceToTouch; dy = ty / distanceToTouch; } else { dx = 0; dy = 0; } }
                 if (dx && dy) { dx *= .707; dy *= .707; }
                 const speed = player.speed * (player.dash > 0 ? 2.7 : 1);
                 player.x = Math.max(arena.x + 5, Math.min(arena.x + arena.w - player.w - 5, player.x + dx * speed * dt));
@@ -229,10 +234,15 @@
             window.addEventListener('blur', () => { keys.clear(); if (state === 'playing' || state === 'intermission') togglePause(); });
             document.querySelectorAll('[data-key]').forEach(button => {
                 const code = button.dataset.key;
-                const press = event => { event.preventDefault(); button.classList.add('active'); if (code === 'Space') dash(); else keys.add(code); canvas.focus(); };
+                const press = event => { event.preventDefault(); button.setPointerCapture?.(event.pointerId); button.classList.add('active'); if (code === 'Space') dash(); else keys.add(code); canvas.focus(); };
                 const release = event => { event.preventDefault(); keys.delete(code); button.classList.remove('active'); };
-                button.addEventListener('pointerdown', press); button.addEventListener('pointerup', release); button.addEventListener('pointercancel', release); button.addEventListener('pointerleave', release);
+                button.addEventListener('pointerdown', press); button.addEventListener('pointerup', release); button.addEventListener('pointercancel', release);
             });
+            function updateTouchTarget(event) { const rect = canvas.getBoundingClientRect(); touchTarget = {x: (event.clientX - rect.left) * canvas.width / rect.width, y: (event.clientY - rect.top) * canvas.height / rect.height}; }
+            canvas.addEventListener('pointerdown', event => { if (event.pointerType === 'mouse') return; event.preventDefault(); touchPointer = event.pointerId; canvas.setPointerCapture(event.pointerId); updateTouchTarget(event); canvas.focus(); });
+            canvas.addEventListener('pointermove', event => { if (event.pointerId !== touchPointer) return; event.preventDefault(); updateTouchTarget(event); });
+            const endTouchMove = event => { if (event.pointerId !== touchPointer) return; event.preventDefault(); touchPointer = null; };
+            canvas.addEventListener('pointerup', endTouchMove); canvas.addEventListener('pointercancel', event => { endTouchMove(event); touchTarget = null; });
             ui.pause.addEventListener('click', togglePause); ui.restart.addEventListener('click', resetGame);
             document.getElementById('themeButton').addEventListener('click', () => { const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'; document.documentElement.dataset.theme = next; sessionStorage.setItem('floptropica-theme', next); });
             document.documentElement.dataset.theme = sessionStorage.getItem('floptropica-theme') || 'dark'; resetGame(); requestAnimationFrame(loop);
@@ -481,7 +491,7 @@
             function loop(time) { const dt = Math.min(.033, ((time - lastTime) || 0) / 1000); lastTime = time; update(dt); if (!panel.hidden) render(); requestAnimationFrame(loop); }
             window.addEventListener('keydown', event => { if (panel.hidden) return; if (['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.code)) event.preventDefault(); if (event.code === 'KeyP' && !event.repeat) togglePause(); else if (event.code === 'Enter' && state === 'gameover') reset(); else keys.add(event.code); });
             window.addEventListener('keyup', event => keys.delete(event.code)); window.addEventListener('blur', () => { keys.clear(); if (!panel.hidden && state === 'playing') togglePause(); });
-            document.querySelectorAll('[data-drive-key]').forEach(button => { const code = button.dataset.driveKey; const press = e => { e.preventDefault(); keys.add(code); button.classList.add('active'); canvas.focus(); }; const release = e => { e.preventDefault(); keys.delete(code); button.classList.remove('active'); }; button.addEventListener('pointerdown', press); button.addEventListener('pointerup', release); button.addEventListener('pointercancel', release); button.addEventListener('pointerleave', release); });
+            document.querySelectorAll('[data-drive-key]').forEach(button => { const code = button.dataset.driveKey; const press = e => { e.preventDefault(); button.setPointerCapture?.(e.pointerId); keys.add(code); button.classList.add('active'); canvas.focus(); }; const release = e => { e.preventDefault(); keys.delete(code); button.classList.remove('active'); }; button.addEventListener('pointerdown', press); button.addEventListener('pointerup', release); button.addEventListener('pointercancel', release); });
             ui.pause.addEventListener('click', togglePause); ui.restart.addEventListener('click', reset); reset(); requestAnimationFrame(loop);
         })();
 
