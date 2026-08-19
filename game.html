@@ -263,7 +263,7 @@
             function randomRoadX(width = 72) { return road.left + 16 + Math.random() * (road.width - width - 32); }
             function leavesEscape(x, width) { return x + width < escapeX - 48 || x > escapeX + 48; }
             function spawnCar(playerSpeed) {
-                const roll = Math.random(), type = roll < .06 ? 'bmw' : roll < .105 ? 'semi' : Math.random() < Math.max(.5, .8 - level * .025) ? 'forward' : 'stopped';
+                const roll = Math.random(), type = roll < .06 ? 'bmw' : roll < .105 ? 'semi' : 'forward';
                 const width = type === 'semi' ? 88 : 72, height = type === 'semi' ? 176 : 116;
                 const worldSpeed = type === 'bmw' ? 345 + Math.random() * 105 : type === 'semi' ? 190 + Math.random() * 65 : type === 'forward' ? 235 + Math.random() * 115 + Math.min(70, level * 4) : 0;
                 const spawnY = worldSpeed > playerSpeed + 20 ? 640 + Math.random() * 100 : -height - 20;
