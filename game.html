@@ -55,7 +55,7 @@
         .game-shell:fullscreen .hud, .game-shell:fullscreen .controls { flex: none; }
         footer { text-align: center; border-top: 1px solid var(--border); padding: 25px; color: var(--muted); }
         footer a { color: var(--accent); text-decoration: none; }
-        @media (hover: none), (pointer: coarse) { .mobile-only { display: block; } .desktop-only { display: none; } .controls.mobile-only { display: grid; } }
+        @media (hover: none), (pointer: coarse), (max-width: 759px) { .mobile-only { display: block; } .desktop-only { display: none; } .controls.mobile-only { display: grid; } }
         @media (max-width: 520px) { .wiki-header h2 { font-size: 1.1rem; } .hud { font-size: .85rem; padding: 9px; } main { padding-inline: 8px; } }
     </style>
 </head>
