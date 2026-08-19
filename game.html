@@ -27,6 +27,12 @@
         .game-tab.active { background: var(--accent); color: #101018; }
         .tab-panel[hidden] { display: none; }
         .game-heading { margin-bottom: 4px; font-size: 1.55rem; }
+        .drive-setup { display: grid; gap: 10px; margin: 12px 0; padding: 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--panel); }
+        .setup-row { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; }
+        .setup-row strong { min-width: 72px; }
+        .setup-button { border: 1px solid var(--border); border-radius: 7px; background: var(--bg); color: var(--text); padding: 7px 10px; font: 500 .85rem 'Fredoka', sans-serif; cursor: pointer; }
+        .setup-button.active { background: var(--accent); color: #101018; }
+        .upgrade-price { color: #ffd45d; }
         .game-shell { overflow: hidden; border: 2px solid var(--accent); border-radius: 12px; background: #03030b; box-shadow: 0 12px 35px rgba(0,0,0,.35); }
         .hud { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding: 11px 16px; background: #121222; color: #fff; font-weight: 500; }
         .fullscreen-button { border: 1px solid #56566d; border-radius: 6px; background: #27273b; color: #fff; padding: 3px 9px; font: 500 .85rem 'Fredoka', sans-serif; cursor: pointer; }
@@ -84,10 +90,15 @@
 
         <div class="tab-panel" id="drivePanel" hidden>
             <h2 class="game-heading">Flop Road</h2>
-            <p class="instructions desktop-only"><strong>Controls:</strong> Left/Right or A/D to steer · Up/W to speed up · Down/S to slow down · P to pause · Enter to restart</p>
+            <p class="instructions desktop-only"><strong>Controls:</strong> Left/Right or A/D to steer · Up/W to accelerate · Down/S to brake · Space for handbrake · P to pause · Enter to restart</p>
             <p class="instructions mobile-only"><strong>Controls:</strong> Use the arrow buttons to steer, speed up, and slow down</p>
+            <div class="drive-setup" aria-label="Flop Road setup">
+                <div class="setup-row"><strong>Mode</strong><button class="setup-button active" data-drive-mode="oneway">One Way</button><button class="setup-button" data-drive-mode="twoway">Two Way</button><button class="setup-button" data-drive-mode="time">Time Attack</button><button class="setup-button" data-drive-mode="bomb">Bomb Run</button></div>
+                <div class="setup-row"><strong>Track</strong><button class="setup-button active" data-drive-track="forest">Forest</button><button class="setup-button" data-drive-track="desert">Desert</button><button class="setup-button" data-drive-track="night">Night</button></div>
+                <div class="setup-row"><strong>Tuning</strong><button class="setup-button" data-upgrade="engine">Engine <span id="engineLevel">0</span> <span class="upgrade-price">(<span id="enginePrice">250</span>¢)</span></button><button class="setup-button" data-upgrade="handling">Handling <span id="handlingLevel">0</span> <span class="upgrade-price">(<span id="handlingPrice">250</span>¢)</span></button><button class="setup-button" data-upgrade="brakes">Brakes <span id="brakesLevel">0</span> <span class="upgrade-price">(<span id="brakesPrice">250</span>¢)</span></button></div>
+            </div>
             <section class="game-shell" aria-label="Flop Road driving game">
-                <div class="hud"><span>Distance: <b id="driveScore">0</b>m</span><span>Level: <b id="driveLevel">1</b></span><span>HP: <b id="driveHp">♥♥♥♥♥</b></span><span id="driveStatus">Gas: 100m</span><span>Best: <b id="driveHigh">0</b>m</span><button class="fullscreen-button" type="button" aria-label="Toggle Flop Road fullscreen">⛶ Fullscreen</button></div>
+                <div class="hud"><span>Score: <b id="driveScore">0</b></span><span>Speed: <b id="driveSpeed">0</b></span><span>Combo: <b id="driveCombo">x1</b></span><span>HP: <b id="driveHp">♥♥♥♥♥</b></span><span>Coins: <b id="driveCoins">0</b>¢</span><span id="driveStatus">One Way</span><button class="fullscreen-button" type="button" aria-label="Toggle Flop Road fullscreen">⛶ Fullscreen</button></div>
                 <canvas id="driveGame" width="900" height="600" tabindex="0" aria-label="Use left and right keys to steer around traffic"></canvas>
                 <div class="controls mobile-only" aria-label="Driving touch controls">
                     <button class="control up" data-drive-key="ArrowUp" aria-label="Speed up">▲</button>
@@ -248,22 +259,24 @@
         (() => {
             'use strict';
             const canvas = document.getElementById('driveGame'), ctx = canvas.getContext('2d'), panel = document.getElementById('drivePanel');
-            const ui = {score: document.getElementById('driveScore'), level: document.getElementById('driveLevel'), hp: document.getElementById('driveHp'), status: document.getElementById('driveStatus'), high: document.getElementById('driveHigh'), pause: document.getElementById('drivePauseButton'), restart: document.getElementById('driveRestartButton')};
+            const ui = {score: document.getElementById('driveScore'), speed: document.getElementById('driveSpeed'), combo: document.getElementById('driveCombo'), hp: document.getElementById('driveHp'), coins: document.getElementById('driveCoins'), status: document.getElementById('driveStatus'), pause: document.getElementById('drivePauseButton'), restart: document.getElementById('driveRestartButton')};
             const road = {left: 165, right: 735, width: 570};
             const images = ['floppfp.png','invader1.png','invader2.png','invader3.png','invader4.png','invader5.png','invader6.png','invader7.png','invader8.png','invader9.png','invader10.png','invader11.png'].map(src => { const image = new Image(); image.src = src; return image; });
             const keys = new Set();
-            let player, traffic, particles, scenery, distance, level, hp, high, state, spawnTimer, roadOffset, shake, lastTime, escapeX, escapeTarget, escapeTimer, gasPhase, gasTimer, nextGas, cameraX;
+            let player, traffic, particles, scenery, distance, level, hp, high, state, spawnTimer, roadOffset, shake, lastTime, escapeX, escapeTarget, escapeTimer, gasPhase, gasTimer, nextGas, cameraX, score, combo, comboTimer, timeLeft, bombTimer, currentRoadSpeed, nextTimeCheckpoint;
+            let driveMode = localStorage.getItem('flop-road-mode') || 'oneway', driveTrack = localStorage.getItem('flop-road-track') || 'forest', coins = Number(localStorage.getItem('flop-road-coins') || 0), upgrades = JSON.parse(localStorage.getItem('flop-road-upgrades') || '{"engine":0,"handling":0,"brakes":0}');
 
             function reset() {
                 player = {x: 414, y: 448, w: 72, h: 118, vx: 0, invulnerable: 1}; traffic = []; particles = [];
                 scenery = Array.from({length: 16}, (_, i) => ({side: i % 2, y: (i * 83) % 650, size: 16 + Math.random() * 15}));
-                distance = 0; level = 1; hp = 5; high = Number(localStorage.getItem('flop-road-high') || 0); state = 'playing'; spawnTimer = .9; roadOffset = 0; shake = 0; escapeX = 450; escapeTarget = 450; escapeTimer = 3; gasPhase = 'highway'; gasTimer = 0; nextGas = 2800; cameraX = 0;
+                distance = 0; score = 0; combo = 1; comboTimer = 0; timeLeft = 60; bombTimer = 45; nextTimeCheckpoint = 1000; currentRoadSpeed = 0; level = 1; hp = 5; high = Number(localStorage.getItem('flop-road-high') || 0); state = 'playing'; spawnTimer = .9; roadOffset = 0; shake = 0; escapeX = 450; escapeTarget = 450; escapeTimer = 3; gasPhase = 'highway'; gasTimer = 0; nextGas = 2800; cameraX = 0;
                 ui.restart.classList.remove('show'); ui.pause.textContent = 'Pause'; updateHud(); canvas.focus();
             }
             function updateHud() {
-                ui.score.textContent = Math.floor(distance); ui.level.textContent = level; ui.hp.textContent = `${'♥'.repeat(Math.ceil(hp)) || '0'} ${hp.toFixed(1)}/5`; ui.high.textContent = high;
+                ui.score.textContent = Math.floor(score); ui.speed.textContent = `${Math.floor(currentRoadSpeed * .42)} km/h`; ui.combo.textContent = `x${combo.toFixed(1)}`; ui.hp.textContent = `${'♥'.repeat(Math.ceil(hp)) || '0'} ${hp.toFixed(1)}/5`; ui.coins.textContent = Math.floor(coins);
                 const remaining = Math.max(0, Math.ceil(nextGas - distance));
-                ui.status.textContent = gasPhase === 'stopped' ? `Refueling: ${Math.max(0, gasTimer).toFixed(1)}s` : gasPhase === 'entering' ? 'Optional gas exit' : gasPhase === 'onexit' ? 'Driving to Flop Fuel' : gasPhase === 'leaving' ? 'Freeway entrance' : gasPhase === 'passing' ? 'Passing Flop Fuel' : `Gas station: ${remaining}m`;
+                const modeStatus = driveMode === 'time' ? `Time ${Math.max(0, timeLeft).toFixed(1)}s` : driveMode === 'bomb' ? `Bomb ${Math.max(0, bombTimer).toFixed(1)}s` : driveMode === 'twoway' && player.x < road.left + road.width / 2 ? 'Wrong side bonus' : driveMode === 'twoway' ? 'Two Way' : 'One Way';
+                ui.status.textContent = gasPhase === 'stopped' ? `Refueling: ${Math.max(0, gasTimer).toFixed(1)}s` : gasPhase === 'onexit' ? 'Flop Fuel' : remaining < 260 ? `Gas ${remaining}m` : modeStatus;
             }
             function carAngle(car) { return car === player ? Math.max(-.12, Math.min(.12, player.vx / 3900)) : car.type === 'bmw' ? Math.max(-.22, Math.min(.22, (car.targetX - car.x) / 250)) : Math.max(-.1, Math.min(.1, (car.targetX - car.x) / 450)); }
             function hitboxCorners(car) {
@@ -285,8 +298,10 @@
                 if (!candidates.length) return;
                 const x = candidates[Math.floor(Math.random() * candidates.length)];
                 const laneWidth = road.width / 4, lane = Math.max(0, Math.min(3, Math.floor((x + width / 2 - road.left) / laneWidth)));
+                const opposite = driveMode === 'twoway' && lane < 2;
                 const bmwDirection = lane === 0 ? 1 : lane === 3 ? -1 : Math.random() < .5 ? -1 : 1;
-                traffic.push({x, targetX: x, y: spawnY, w: width, h: height, type, worldSpeed, currentSpeed: worldSpeed, lane, bmwDirection, changing: false, bmwArmed: false, bmwSwitched: false, laneCooldown: 0, image: 1 + Math.floor(Math.random() * (images.length - 1))});
+                const trafficSpeed = opposite ? -(260 + Math.random() * 130) : worldSpeed;
+                traffic.push({x, targetX: x, y: opposite ? -height - 20 : spawnY, w: width, h: height, type, opposite, worldSpeed: trafficSpeed, currentSpeed: trafficSpeed, lane, bmwDirection, changing: false, bmwArmed: false, bmwSwitched: false, laneCooldown: 0, image: 1 + Math.floor(Math.random() * (images.length - 1))});
             }
             function sparks(x, y, color) { for (let i = 0; i < 22; i++) particles.push({x, y, vx: (Math.random() - .5) * 260, vy: (Math.random() - .5) * 260, life: .8, color}); }
             function collisionDamage(car) {
@@ -303,10 +318,11 @@
                 return Math.min(2.5, Math.max(.08, Math.pow(impactSpeed / 300, 1.3) * (0.25 + coverage * 1.25) * angleForce));
             }
             function hit(car) {
-                if (player.invulnerable > 0) return; const damage = collisionDamage(car); hp = Math.max(0, hp - damage); player.invulnerable = Math.max(.55, 1.2 - damage * .18); shake = Math.min(.7, .15 + damage * .22); car.dead = true; player.vx += player.x < car.x ? -120 - damage * 80 : 120 + damage * 80; sparks(player.x + 36, player.y + 35, damage > 1.25 ? '#ff4a32' : '#ffc24b');
-                if (hp <= 0) { state = 'gameover'; high = Math.max(high, Math.floor(distance)); localStorage.setItem('flop-road-high', String(high)); ui.restart.classList.add('show'); }
+                if (player.invulnerable > 0) return; const damage = collisionDamage(car); hp = Math.max(0, hp - damage); combo = 1; comboTimer = 0; if (driveMode === 'bomb') bombTimer -= 6 + damage * 2; player.invulnerable = Math.max(.55, 1.2 - damage * .18); shake = Math.min(.7, .15 + damage * .22); car.dead = true; player.vx += player.x < car.x ? -120 - damage * 80 : 120 + damage * 80; sparks(player.x + 36, player.y + 35, damage > 1.25 ? '#ff4a32' : '#ffc24b');
+                if (hp <= 0 || bombTimer <= 0) endDrive();
                 updateHud();
             }
+            function endDrive() { state = 'gameover'; high = Math.max(high, Math.floor(score)); localStorage.setItem('flop-road-high', String(high)); localStorage.setItem('flop-road-coins', String(Math.floor(coins))); ui.restart.classList.add('show'); }
             function togglePause() { if (state === 'playing') state = 'paused'; else if (state === 'paused') state = 'playing'; ui.pause.textContent = state === 'paused' ? 'Resume' : 'Pause'; }
             function passStation(forceMerge = false) {
                 if (forceMerge) player.x = road.right - player.w - 13;
@@ -317,8 +333,8 @@
             function update(dt) {
                 if (panel.hidden || state !== 'playing') return;
                 level = 1 + Math.floor(distance / 700);
-                const throttle = keys.has('ArrowUp') || keys.has('KeyW') ? 1.75 : keys.has('ArrowDown') || keys.has('KeyS') ? .4 : 1;
-                const cruiseSpeed = (315 + Math.min(360, level * 28)) * throttle;
+                const throttle = keys.has('Space') ? .22 : keys.has('ArrowUp') || keys.has('KeyW') ? 1.75 : keys.has('ArrowDown') || keys.has('KeyS') ? Math.max(.2, .4 - upgrades.brakes * .035) : 1;
+                const cruiseSpeed = (315 + upgrades.engine * 18 + Math.min(360, level * 28)) * throttle;
                 if (gasPhase === 'highway' && distance >= nextGas - 260) gasPhase = 'approaching';
                 if (gasPhase === 'approaching' && distance >= nextGas - 45) {
                     gasPhase = 'entering';
@@ -341,9 +357,12 @@
                 }
                 let roadSpeed = cruiseSpeed;
                 if (gasPhase === 'stopped') roadSpeed = 0;
-                distance += roadSpeed * dt / 10; roadOffset = (roadOffset + roadSpeed * dt) % 100; player.invulnerable -= dt; shake -= dt;
+                currentRoadSpeed = roadSpeed; distance += roadSpeed * dt / 10; score += roadSpeed * dt / 10 * combo * (driveMode === 'twoway' && player.x < road.left + road.width / 2 ? 1.5 : 1); coins += roadSpeed * dt / 1400; roadOffset = (roadOffset + roadSpeed * dt) % 100; player.invulnerable -= dt; shake -= dt;
+                comboTimer -= dt; if (comboTimer <= 0) combo = Math.max(1, combo - dt * .7);
+                if (driveMode === 'time') { timeLeft -= dt; if (distance >= nextTimeCheckpoint) { timeLeft += 12; nextTimeCheckpoint += 1000; } if (timeLeft <= 0) { endDrive(); return; } }
+                if (driveMode === 'bomb') { bombTimer -= dt; if (bombTimer <= 0) { endDrive(); return; } }
                 const steer = (keys.has('ArrowLeft') || keys.has('KeyA') ? -1 : 0) + (keys.has('ArrowRight') || keys.has('KeyD') ? 1 : 0);
-                if (gasPhase !== 'stopped') { player.vx += steer * 2600 * dt; player.vx *= Math.pow(.9, dt * 60); player.vx = Math.max(-760, Math.min(760, player.vx)); player.x += player.vx * dt; }
+                if (gasPhase !== 'stopped') { player.vx += steer * (2600 + upgrades.handling * 150) * (keys.has('Space') ? 1.35 : 1) * dt; player.vx *= Math.pow(keys.has('Space') ? .94 : .9, dt * 60); player.vx = Math.max(-760 - upgrades.handling * 35, Math.min(760 + upgrades.handling * 35, player.vx)); player.x += player.vx * dt; }
                 const routeOpen = gasPhase === 'entering' || gasPhase === 'onexit' || gasPhase === 'stopped' || gasPhase === 'leaving';
                 const rightLimit = routeOpen ? 878 : road.right - 13;
                 if (player.x < road.left + 13) { player.x = road.left + 13; player.vx *= -.25; } if (player.x + player.w > rightLimit) { player.x = rightLimit - player.w; player.vx *= -.25; }
@@ -366,8 +385,9 @@
                     spawnTimer = Math.max(.22, .92 - level * .055) * (.68 + Math.random() * .48);
                 }
                 traffic.forEach(car => {
-                    const leaders = traffic.map(other => ({other, gap: car.y - (other.y + other.h)})).filter(item => item.other !== car && item.gap >= 0 && item.gap < 320 && item.other.x < car.x + car.w - 10 && item.other.x + item.other.w > car.x + 10).sort((a, b) => a.gap - b.gap);
-                    const playerGap = car.y - (player.y + player.h); if (playerGap >= 0 && playerGap < 360 && player.x < car.x + car.w - 8 && player.x + player.w > car.x + 8) leaders.push({other: {currentSpeed: roadSpeed}, gap: playerGap}); leaders.sort((a, b) => a.gap - b.gap);
+                    const previousY = car.y;
+                    const leaders = traffic.map(other => ({other, gap: car.y - (other.y + other.h)})).filter(item => item.other !== car && item.other.opposite === car.opposite && item.gap >= 0 && item.gap < 320 && item.other.x < car.x + car.w - 10 && item.other.x + item.other.w > car.x + 10).sort((a, b) => a.gap - b.gap);
+                    const playerGap = car.y - (player.y + player.h); if (!car.opposite && playerGap >= 0 && playerGap < 360 && player.x < car.x + car.w - 8 && player.x + player.w > car.x + 8) leaders.push({other: {currentSpeed: roadSpeed}, gap: playerGap}); leaders.sort((a, b) => a.gap - b.gap);
                     const leader = leaders[0]; let desiredSpeed = car.worldSpeed;
                     if (leader) desiredSpeed = Math.min(desiredSpeed, (leader.other.currentSpeed ?? leader.other.worldSpeed) + Math.max(0, leader.gap - 115) * .75);
                     const speedResponse = desiredSpeed < car.currentSpeed ? 5.5 : .85; car.currentSpeed += (desiredSpeed - car.currentSpeed) * Math.min(1, dt * speedResponse);
@@ -385,10 +405,14 @@
                     }
                     const previousX = car.x; car.x += (car.targetX - car.x) * Math.min(1, dt * (car.type === 'bmw' ? 1.7 : .7)); car.lateralSpeed = (car.x - previousX) / Math.max(dt, .001);
                     if (car.changing && Math.abs(car.targetX - car.x) < 1) { car.x = car.targetX; car.changing = false; }
-                    if (overlap(player, car)) {
+                    const collided = overlap(player, car);
+                    if (collided) {
                         const rearEnding = car.y + car.h / 2 > player.y + player.h / 2 && car.relativeSpeed < 0;
                         if (rearEnding) { car.y = player.y + player.h + 12; car.currentSpeed = Math.min(car.currentSpeed, roadSpeed); }
                         else hit(car);
+                    } else if (!car.nearChecked && (previousY + car.h / 2 - (player.y + player.h / 2)) * (car.y + car.h / 2 - (player.y + player.h / 2)) <= 0) {
+                        car.nearChecked = true; const sideGap = Math.max(player.x - (car.x + car.w), car.x - (player.x + player.w));
+                        if (sideGap >= 0 && sideGap < 38) { combo = Math.min(8, combo + .5); comboTimer = 3; score += 150 * combo; coins += 8 * combo; localStorage.setItem('flop-road-coins', String(Math.floor(coins))); if (driveMode === 'bomb') bombTimer += 2.5; sparks(player.x + player.w / 2, player.y, '#65eaff'); }
                     }
                 });
                 for (let i = 0; i < traffic.length; i++) for (let j = i + 1; j < traffic.length; j++) {
@@ -413,7 +437,7 @@
             function drawCar(car, playerCar = false) {
                 ctx.save(); const cx = car.x + car.w / 2, cy = car.y + car.h / 2;
                 const angle = carAngle(car);
-                ctx.translate(cx, cy); ctx.rotate(angle); ctx.translate(-cx, -cy);
+                ctx.translate(cx, cy); ctx.rotate(angle + (!playerCar && car.opposite ? Math.PI : 0)); ctx.translate(-cx, -cy);
                 if (!playerCar && car.type === 'semi') {
                     ctx.fillStyle = 'rgba(0,0,0,.4)'; roundRect(car.x + 6, car.y + 8, car.w, car.h, 12); ctx.fill();
                     ctx.fillStyle = '#101016'; [30, car.h - 58, car.h - 28].forEach(offset => { ctx.fillRect(car.x - 6, car.y + offset, 9, 25); ctx.fillRect(car.x + car.w - 3, car.y + offset, 9, 25); });
@@ -471,24 +495,34 @@
             }
             function render() {
                 const sx = shake > 0 ? (Math.random() - .5) * 12 : 0, sy = shake > 0 ? (Math.random() - .5) * 8 : 0; ctx.save(); ctx.translate(sx - cameraX, sy);
-                const grass = ctx.createLinearGradient(0, 0, 1050, 0); grass.addColorStop(0, '#174d2d'); grass.addColorStop(.5, '#28653b'); grass.addColorStop(1, '#174d2d'); ctx.fillStyle = grass; ctx.fillRect(-20, -10, 1100, 620);
+                const trackColors = driveTrack === 'desert' ? ['#9a6c32','#d19b4d','#9a6c32'] : driveTrack === 'night' ? ['#071325','#142849','#071325'] : ['#174d2d','#28653b','#174d2d'];
+                const grass = ctx.createLinearGradient(0, 0, 1050, 0); grass.addColorStop(0, trackColors[0]); grass.addColorStop(.5, trackColors[1]); grass.addColorStop(1, trackColors[2]); ctx.fillStyle = grass; ctx.fillRect(-20, -10, 1100, 620);
                 scenery.forEach(item => { const x = item.side ? road.right + 45 + (item.size % 30) : road.left - 70 - (item.size % 24); ctx.fillStyle = '#0a2b18'; ctx.beginPath(); ctx.arc(x + 4, item.y + 5, item.size + 3, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = '#3a9350'; ctx.beginPath(); ctx.arc(x, item.y, item.size, 0, Math.PI * 2); ctx.fill(); });
                 ctx.fillStyle = '#d9d1b0'; ctx.fillRect(road.left - 14, 0, 14, 600); ctx.fillRect(road.right, 0, 14, 600);
                 const asphalt = ctx.createLinearGradient(road.left, 0, road.right, 0); asphalt.addColorStop(0, '#34353c'); asphalt.addColorStop(.5, '#4b4c53'); asphalt.addColorStop(1, '#34353c'); ctx.fillStyle = asphalt; ctx.fillRect(road.left, 0, road.width, 600);
                 ctx.fillStyle = '#f6e997';
                 [1, 2, 3].map(lane => road.left + road.width * lane / 4).forEach(x => { for (let y = -60 + roadOffset; y < 660; y += 100) ctx.fillRect(x - 2.5, y, 5, 45); });
+                if (driveMode === 'twoway') { ctx.fillStyle = '#ffd43b'; ctx.fillRect(road.left + road.width / 2 - 6, 0, 4, 600); ctx.fillRect(road.left + road.width / 2 + 2, 0, 4, 600); }
                 for (let y = -60 + roadOffset; y < 660; y += 100) { ctx.fillStyle = '#fff'; ctx.fillRect(road.left - 11, y, 8, 34); ctx.fillRect(road.right + 3, y, 8, 34); }
                 drawGasStation();
                 traffic.sort((a,b) => a.y - b.y).forEach(car => drawCar(car));
                 ctx.globalAlpha = player.invulnerable > 0 && Math.floor(player.invulnerable * 12) % 2 ? .4 : 1; drawCar(player, true); ctx.globalAlpha = 1;
+                if (driveMode === 'bomb') { ctx.fillStyle = '#1b1b1b'; ctx.beginPath(); ctx.arc(player.x + player.w - 5, player.y + 18, 13, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = '#ff4438'; ctx.lineWidth = 3; ctx.stroke(); }
                 particles.forEach(p => { ctx.globalAlpha = Math.max(0, p.life); ctx.fillStyle = p.color; ctx.fillRect(p.x, p.y, 6, 6); }); ctx.globalAlpha = 1; ctx.restore();
                 if (state === 'paused' || state === 'gameover') { ctx.fillStyle = 'rgba(0,0,0,.72)'; ctx.fillRect(0,0,900,600); ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.font = '500 55px Fredoka, sans-serif'; ctx.fillText(state === 'paused' ? 'PAUSED' : 'WRECKED!', 450,270); ctx.font = '400 24px Fredoka, sans-serif'; ctx.fillText(state === 'paused' ? 'Press P to continue' : `You drove ${Math.floor(distance)} meters`,450,310); }
             }
             function loop(time) { const dt = Math.min(.033, ((time - lastTime) || 0) / 1000); lastTime = time; update(dt); if (!panel.hidden) render(); requestAnimationFrame(loop); }
-            window.addEventListener('keydown', event => { if (panel.hidden) return; if (['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.code)) event.preventDefault(); if (event.code === 'KeyP' && !event.repeat) togglePause(); else if (event.code === 'Enter' && state === 'gameover') reset(); else keys.add(event.code); });
+            window.addEventListener('keydown', event => { if (panel.hidden) return; if (['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Space'].includes(event.code)) event.preventDefault(); if (event.code === 'KeyP' && !event.repeat) togglePause(); else if (event.code === 'Enter' && state === 'gameover') reset(); else keys.add(event.code); });
             window.addEventListener('keyup', event => keys.delete(event.code)); window.addEventListener('blur', () => { keys.clear(); if (!panel.hidden && state === 'playing') togglePause(); });
             document.querySelectorAll('[data-drive-key]').forEach(button => { const code = button.dataset.driveKey; const press = e => { e.preventDefault(); button.setPointerCapture?.(e.pointerId); keys.add(code); button.classList.add('active'); canvas.focus(); }; const release = e => { e.preventDefault(); keys.delete(code); button.classList.remove('active'); }; button.addEventListener('pointerdown', press); button.addEventListener('pointerup', release); button.addEventListener('pointercancel', release); });
-            ui.pause.addEventListener('click', togglePause); ui.restart.addEventListener('click', reset); reset(); requestAnimationFrame(loop);
+            function updateDriveSetup() {
+                document.querySelectorAll('[data-drive-mode]').forEach(button => button.classList.toggle('active', button.dataset.driveMode === driveMode)); document.querySelectorAll('[data-drive-track]').forEach(button => button.classList.toggle('active', button.dataset.driveTrack === driveTrack));
+                ['engine','handling','brakes'].forEach(name => { const price = 250 * (upgrades[name] + 1); document.getElementById(`${name}Level`).textContent = upgrades[name]; document.getElementById(`${name}Price`).textContent = upgrades[name] >= 5 ? 'MAX' : price; });
+            }
+            document.querySelectorAll('[data-drive-mode]').forEach(button => button.addEventListener('click', () => { driveMode = button.dataset.driveMode; localStorage.setItem('flop-road-mode', driveMode); updateDriveSetup(); reset(); }));
+            document.querySelectorAll('[data-drive-track]').forEach(button => button.addEventListener('click', () => { driveTrack = button.dataset.driveTrack; localStorage.setItem('flop-road-track', driveTrack); updateDriveSetup(); reset(); }));
+            document.querySelectorAll('[data-upgrade]').forEach(button => button.addEventListener('click', () => { const name = button.dataset.upgrade, price = 250 * (upgrades[name] + 1); if (upgrades[name] >= 5 || coins < price) return; coins -= price; upgrades[name]++; localStorage.setItem('flop-road-coins', String(Math.floor(coins))); localStorage.setItem('flop-road-upgrades', JSON.stringify(upgrades)); updateDriveSetup(); updateHud(); }));
+            ui.pause.addEventListener('click', togglePause); ui.restart.addEventListener('click', reset); updateDriveSetup(); reset(); requestAnimationFrame(loop);
         })();
 
         document.querySelectorAll('.game-tab').forEach(tab => tab.addEventListener('click', () => {
