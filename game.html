@@ -303,19 +303,19 @@
                 if (gasPhase === 'highway' && distance >= nextGas - 260) gasPhase = 'approaching';
                 if (gasPhase === 'approaching' && distance >= nextGas - 45) {
                     gasPhase = 'entering';
-                    traffic.forEach(car => { if (car.x + car.w / 2 > road.right - road.width / 4) { car.takingExit = true; car.targetX = 810; car.changing = true; } });
                 }
                 if (gasPhase === 'entering') {
-                    if (player.x > road.right - 12 && distance >= nextGas - 8) gasPhase = 'onexit';
-                    else if (distance > nextGas + 35) { gasPhase = 'highway'; nextGas += 2800; }
+                    if (distance >= nextGas - 18) traffic.forEach(car => { if (!car.takingExit && car.x + car.w / 2 > road.right - road.width / 4) { car.takingExit = true; car.targetX = 810; car.changing = true; } });
+                    if (player.x > road.right - 12 && distance >= nextGas - 18) gasPhase = 'onexit';
+                    else if (distance > nextGas + 100) { gasPhase = 'highway'; nextGas += 2800; }
                 } else if (gasPhase === 'onexit') {
                     if (distance >= nextGas + 60) { gasPhase = 'stopped'; gasTimer = 3; player.vx = 0; }
                 } else if (gasPhase === 'stopped') {
                     gasTimer -= dt; player.vx = 0;
                     if (gasTimer <= 0) { hp = Math.min(5, hp + 1); gasPhase = 'leaving'; updateHud(); }
                 } else if (gasPhase === 'leaving') {
-                    if (distance >= nextGas + 95) traffic.forEach(car => { if (car.takingExit) { car.targetX = road.right - road.width / 8 - car.w / 2; car.changing = true; } });
-                    if (distance >= nextGas + 125 && player.x <= road.right - player.w - 13) { gasPhase = 'highway'; nextGas += 2800; spawnTimer = 1.1; }
+                    if (distance >= nextGas + 70) traffic.forEach(car => { if (car.takingExit) { car.targetX = road.right - road.width / 8 - car.w / 2; car.changing = true; } });
+                    if (distance >= nextGas + 70 && player.x <= road.right - player.w - 13) { gasPhase = 'highway'; nextGas += 2800; spawnTimer = 1.1; }
                     else if (distance >= nextGas + 145) { player.x = road.right - player.w - 13; gasPhase = 'highway'; nextGas += 2800; spawnTimer = 1.1; }
                 }
                 let roadSpeed = cruiseSpeed;
@@ -326,7 +326,7 @@
                 const routeOpen = gasPhase === 'entering' || gasPhase === 'onexit' || gasPhase === 'stopped' || gasPhase === 'leaving';
                 const rightLimit = routeOpen ? 878 : road.right - 13;
                 if (player.x < road.left + 13) { player.x = road.left + 13; player.vx *= -.25; } if (player.x + player.w > rightLimit) { player.x = rightLimit - player.w; player.vx *= -.25; }
-                let cameraTarget = gasPhase === 'onexit' || gasPhase === 'stopped' ? 150 : gasPhase === 'entering' ? Math.max(0, Math.min(150, (player.x - 610) * 1.25)) : gasPhase === 'leaving' ? 150 * Math.max(0, Math.min(1, (nextGas + 145 - distance) / 35)) : 0;
+                const cameraTarget = routeOpen ? Math.max(0, Math.min(150, (player.x - 610) * 1.25)) : 0;
                 cameraX += (cameraTarget - cameraX) * Math.min(1, dt * 2.8);
                 escapeTimer -= dt;
                 if (escapeTimer <= 0) {
@@ -413,21 +413,18 @@
                     ctx.font = '500 17px Fredoka, sans-serif'; ctx.fillText('200 m', 825, signY + 54); ctx.fillText('EXIT  →', 825, signY + 77);
                 }
                 ctx.save();
+                const plazaTop = routeY - 1050, plazaHeight = 1210;
+                ctx.fillStyle = '#d6d2c8'; roundRect(road.right - 3, plazaTop, 330, plazaHeight, 22); ctx.fill();
+                ctx.fillStyle = '#aaa79e'; ctx.fillRect(road.right - 3, plazaTop + 18, 330, plazaHeight - 36);
+                ctx.fillStyle = '#4a4b50'; ctx.fillRect(road.right - 3, plazaTop + 38, 86, plazaHeight - 76);
+                ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.setLineDash([24,22]); ctx.beginPath(); ctx.moveTo(road.right + 40, plazaTop + 55); ctx.lineTo(road.right + 40, plazaTop + plazaHeight - 55); ctx.stroke(); ctx.setLineDash([]);
+                ctx.fillStyle = '#f5f5f0'; for (let y = plazaTop + 95; y < plazaTop + plazaHeight - 70; y += 170) { ctx.beginPath(); ctx.moveTo(road.right + 40, y - 24); ctx.lineTo(road.right + 28, y); ctx.lineTo(road.right + 36, y); ctx.lineTo(road.right + 36, y + 22); ctx.lineTo(road.right + 44, y + 22); ctx.lineTo(road.right + 44, y); ctx.lineTo(road.right + 52, y); ctx.closePath(); ctx.fill(); }
                 if (stationY > -390 && stationY < 720) {
-                    ctx.fillStyle = '#b9b5a9'; roundRect(704, stationY - 255, 326, 345, 18); ctx.fill();
-                    ctx.strokeStyle = '#e9e3cf'; ctx.lineWidth = 3; ctx.setLineDash([]);
+                    ctx.strokeStyle = '#ece7da'; ctx.lineWidth = 3;
                     [925, 965, 1005].forEach(x => { ctx.beginPath(); ctx.moveTo(x, stationY - 55); ctx.lineTo(x, stationY + 60); ctx.stroke(); });
                     ctx.fillStyle = '#738c43'; roundRect(970, stationY - 238, 45, 150, 16); ctx.fill();
                     [stationY - 215, stationY - 160, stationY - 108].forEach(y => { ctx.fillStyle = '#3f632c'; ctx.beginPath(); ctx.arc(992, y, 14, 0, Math.PI * 2); ctx.fill(); });
                 }
-                ctx.strokeStyle = '#d9d1b0'; ctx.lineWidth = 105; ctx.beginPath(); ctx.moveTo(690, routeY + 80); ctx.bezierCurveTo(730, routeY - 5, 805, routeY - 45, 825, routeY - 130); ctx.lineTo(825, routeY - 1060); ctx.bezierCurveTo(805, routeY - 1140, 735, routeY - 1165, 690, routeY - 1240); ctx.stroke();
-                ctx.strokeStyle = '#44464d'; ctx.lineWidth = 91; ctx.stroke();
-                ctx.strokeStyle = '#f3e69a'; ctx.lineWidth = 4; ctx.setLineDash([26,24]); ctx.lineDashOffset = 0; ctx.stroke(); ctx.setLineDash([]);
-                ctx.fillStyle = '#d8c58e'; ctx.beginPath(); ctx.moveTo(689, routeY + 72); ctx.lineTo(742, routeY - 70); ctx.lineTo(701, routeY - 48); ctx.closePath(); ctx.fill();
-                ctx.fillStyle = '#f5f5f0'; for (let i = 0; i < 7; i++) { const y = routeY + 50 - i * 19; ctx.beginPath(); ctx.moveTo(687 + i * 5, y); ctx.lineTo(708 + i * 5, y - 12); ctx.lineTo(699 + i * 5, y - 12); ctx.lineTo(678 + i * 5, y); ctx.closePath(); ctx.fill(); }
-                ctx.strokeStyle = '#d8dadd'; ctx.lineWidth = 5; for (let y = routeY - 180; y > routeY - 1040; y -= 85) { ctx.beginPath(); ctx.moveTo(774, y); ctx.lineTo(774, y - 48); ctx.stroke(); ctx.fillStyle = '#8b8f92'; ctx.fillRect(768, y - 6, 12, 7); }
-                const entranceSignY = routeY - 1100;
-                if (entranceSignY > -120 && entranceSignY < 650) { ctx.fillStyle = '#8c9094'; ctx.fillRect(752, entranceSignY + 45, 6, 55); ctx.fillStyle = '#176b43'; roundRect(710, entranceSignY, 105, 48, 5); ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke(); ctx.fillStyle = '#fff'; ctx.font = '500 15px Fredoka, sans-serif'; ctx.textAlign = 'center'; ctx.fillText('FREEWAY  ←', 762, entranceSignY + 30); }
                 if (stationY > -380 && stationY < 650) {
                     ctx.fillStyle = 'rgba(0,0,0,.3)'; roundRect(880, stationY - 215, 135, 125, 10); ctx.fill();
                     ctx.fillStyle = '#f4efe2'; roundRect(872, stationY - 225, 138, 120, 8); ctx.fill(); ctx.fillStyle = '#bd2f35'; ctx.fillRect(872, stationY - 225, 138, 30);
