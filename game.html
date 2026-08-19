@@ -278,6 +278,7 @@
             function collisionDamage(car) {
                 const playerCenter = {x: player.x + player.w / 2, y: player.y + player.h / 2}, carCenter = {x: car.x + car.w / 2, y: car.y + car.h / 2};
                 const dx = playerCenter.x - carCenter.x, dy = playerCenter.y - carCenter.y, length = Math.hypot(dx, dy) || 1;
+                if (carCenter.y > playerCenter.y && car.relativeSpeed < -20 && Math.abs(dx) < (player.w + car.w) * .45) return .1;
                 const normal = {x: dx / length, y: dy / length};
                 const relativeVelocity = {x: player.vx - (car.lateralSpeed || 0), y: -(car.relativeSpeed || 0)};
                 const impactSpeed = Math.abs(relativeVelocity.x * normal.x + relativeVelocity.y * normal.y);
@@ -409,15 +410,30 @@
                     ctx.font = '500 17px Fredoka, sans-serif'; ctx.fillText('200 m', 825, signY + 54); ctx.fillText('EXIT  →', 825, signY + 77);
                 }
                 ctx.save();
+                if (stationY > -390 && stationY < 720) {
+                    ctx.fillStyle = '#b9b5a9'; roundRect(704, stationY - 255, 326, 345, 18); ctx.fill();
+                    ctx.strokeStyle = '#e9e3cf'; ctx.lineWidth = 3; ctx.setLineDash([]);
+                    [925, 965, 1005].forEach(x => { ctx.beginPath(); ctx.moveTo(x, stationY - 55); ctx.lineTo(x, stationY + 60); ctx.stroke(); });
+                    ctx.fillStyle = '#738c43'; roundRect(970, stationY - 238, 45, 150, 16); ctx.fill();
+                    [stationY - 215, stationY - 160, stationY - 108].forEach(y => { ctx.fillStyle = '#3f632c'; ctx.beginPath(); ctx.arc(992, y, 14, 0, Math.PI * 2); ctx.fill(); });
+                }
                 ctx.strokeStyle = '#d9d1b0'; ctx.lineWidth = 105; ctx.beginPath(); ctx.moveTo(690, routeY + 80); ctx.bezierCurveTo(730, routeY - 5, 805, routeY - 45, 825, routeY - 130); ctx.lineTo(825, routeY - 1060); ctx.bezierCurveTo(805, routeY - 1140, 735, routeY - 1165, 690, routeY - 1240); ctx.stroke();
                 ctx.strokeStyle = '#44464d'; ctx.lineWidth = 91; ctx.stroke();
                 ctx.strokeStyle = '#f3e69a'; ctx.lineWidth = 4; ctx.setLineDash([26,24]); ctx.lineDashOffset = 0; ctx.stroke(); ctx.setLineDash([]);
-                ctx.fillStyle = '#f5f5f0'; for (let i = 0; i < 5; i++) { const y = routeY + 40 - i * 23; ctx.beginPath(); ctx.moveTo(690 + i * 7, y); ctx.lineTo(708 + i * 7, y - 14); ctx.lineTo(699 + i * 7, y - 14); ctx.lineTo(681 + i * 7, y); ctx.closePath(); ctx.fill(); }
+                ctx.fillStyle = '#d8c58e'; ctx.beginPath(); ctx.moveTo(689, routeY + 72); ctx.lineTo(742, routeY - 70); ctx.lineTo(701, routeY - 48); ctx.closePath(); ctx.fill();
+                ctx.fillStyle = '#f5f5f0'; for (let i = 0; i < 7; i++) { const y = routeY + 50 - i * 19; ctx.beginPath(); ctx.moveTo(687 + i * 5, y); ctx.lineTo(708 + i * 5, y - 12); ctx.lineTo(699 + i * 5, y - 12); ctx.lineTo(678 + i * 5, y); ctx.closePath(); ctx.fill(); }
+                ctx.strokeStyle = '#d8dadd'; ctx.lineWidth = 5; for (let y = routeY - 180; y > routeY - 1040; y -= 85) { ctx.beginPath(); ctx.moveTo(774, y); ctx.lineTo(774, y - 48); ctx.stroke(); ctx.fillStyle = '#8b8f92'; ctx.fillRect(768, y - 6, 12, 7); }
+                const entranceSignY = routeY - 1100;
+                if (entranceSignY > -120 && entranceSignY < 650) { ctx.fillStyle = '#8c9094'; ctx.fillRect(752, entranceSignY + 45, 6, 55); ctx.fillStyle = '#176b43'; roundRect(710, entranceSignY, 105, 48, 5); ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke(); ctx.fillStyle = '#fff'; ctx.font = '500 15px Fredoka, sans-serif'; ctx.textAlign = 'center'; ctx.fillText('FREEWAY  ←', 762, entranceSignY + 30); }
                 if (stationY > -380 && stationY < 650) {
-                    ctx.fillStyle = '#f4efe2'; roundRect(742, stationY - 190, 150, 105, 8); ctx.fill(); ctx.fillStyle = '#d83b3b'; ctx.fillRect(742, stationY - 190, 150, 25);
-                    ctx.fillStyle = '#25252d'; ctx.font = '500 23px Fredoka, sans-serif'; ctx.textAlign = 'center'; ctx.fillText('FLOP FUEL', 817, stationY - 130);
-                    ctx.fillStyle = '#e7ddc1'; ctx.fillRect(725, stationY - 45, 170, 22); ctx.fillStyle = '#d83b3b'; ctx.fillRect(725, stationY - 45, 170, 8);
-                    [755, 835].forEach(x => { ctx.fillStyle = '#ececec'; roundRect(x, stationY - 23, 34, 62, 5); ctx.fill(); ctx.fillStyle = '#26262f'; ctx.fillRect(x + 7, stationY - 13, 20, 17); ctx.fillStyle = '#d83b3b'; ctx.fillRect(x + 10, stationY + 13, 14, 10); });
+                    ctx.fillStyle = 'rgba(0,0,0,.3)'; roundRect(880, stationY - 215, 135, 125, 10); ctx.fill();
+                    ctx.fillStyle = '#f4efe2'; roundRect(872, stationY - 225, 138, 120, 8); ctx.fill(); ctx.fillStyle = '#bd2f35'; ctx.fillRect(872, stationY - 225, 138, 30);
+                    ctx.fillStyle = '#fff'; ctx.font = '500 19px Fredoka, sans-serif'; ctx.textAlign = 'center'; ctx.fillText('FLOP FUEL', 941, stationY - 203);
+                    ctx.fillStyle = '#79b9cf'; roundRect(887, stationY - 180, 48, 50, 4); ctx.fill(); ctx.fillStyle = '#3c3028'; roundRect(948, stationY - 182, 42, 77, 4); ctx.fill();
+                    ctx.fillStyle = 'rgba(0,0,0,.28)'; ctx.fillRect(708, stationY - 55, 190, 26); ctx.fillStyle = '#f0e4c7'; roundRect(700, stationY - 65, 198, 24, 5); ctx.fill(); ctx.fillStyle = '#c62f37'; ctx.fillRect(700, stationY - 65, 198, 8);
+                    [737, 810].forEach(x => { ctx.fillStyle = '#ebecef'; roundRect(x, stationY - 41, 38, 70, 5); ctx.fill(); ctx.fillStyle = '#202830'; ctx.fillRect(x + 7, stationY - 30, 24, 19); ctx.fillStyle = '#d23b3b'; ctx.fillRect(x + 11, stationY, 16, 11); ctx.strokeStyle = '#242424'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(x + 38, stationY - 2, 13, -Math.PI / 2, Math.PI / 2); ctx.stroke(); });
+                    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.moveTo(780, stationY + 75); ctx.lineTo(765, stationY + 48); ctx.lineTo(775, stationY + 48); ctx.lineTo(775, stationY + 30); ctx.lineTo(785, stationY + 30); ctx.lineTo(785, stationY + 48); ctx.lineTo(795, stationY + 48); ctx.closePath(); ctx.fill();
+                    const glow = ctx.createRadialGradient(735, stationY - 38, 2, 735, stationY - 38, 50); glow.addColorStop(0, 'rgba(255,245,180,.32)'); glow.addColorStop(1, 'rgba(255,245,180,0)'); ctx.fillStyle = glow; ctx.fillRect(685, stationY - 88, 100, 100);
                 }
                 if (gasPhase === 'stopped') { ctx.fillStyle = '#fff'; ctx.font = '500 22px Fredoka, sans-serif'; ctx.textAlign = 'center'; ctx.fillText(`REFUELING ${Math.max(0, gasTimer).toFixed(1)}s`, 625, 420); }
                 ctx.restore();
