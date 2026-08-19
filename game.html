@@ -32,7 +32,6 @@
         .setup-row strong { min-width: 72px; }
         .setup-button { border: 1px solid var(--border); border-radius: 7px; background: var(--bg); color: var(--text); padding: 7px 10px; font: 500 .85rem 'Fredoka', sans-serif; cursor: pointer; }
         .setup-button.active { background: var(--accent); color: #101018; }
-        .upgrade-price { color: #ffd45d; }
         .game-shell { overflow: hidden; border: 2px solid var(--accent); border-radius: 12px; background: #03030b; box-shadow: 0 12px 35px rgba(0,0,0,.35); }
         .hud { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding: 11px 16px; background: #121222; color: #fff; font-weight: 500; }
         .fullscreen-button { border: 1px solid #56566d; border-radius: 6px; background: #27273b; color: #fff; padding: 3px 9px; font: 500 .85rem 'Fredoka', sans-serif; cursor: pointer; }
@@ -95,7 +94,6 @@
             <div class="drive-setup" aria-label="Flop Road setup">
                 <div class="setup-row"><strong>Mode</strong><button class="setup-button active" data-drive-mode="oneway">One Way</button><button class="setup-button" data-drive-mode="twoway">Two Way</button><button class="setup-button" data-drive-mode="time">Time Attack</button><button class="setup-button" data-drive-mode="bomb">Bomb Run</button></div>
                 <div class="setup-row"><strong>Track</strong><button class="setup-button active" data-drive-track="forest">Forest</button><button class="setup-button" data-drive-track="desert">Desert</button><button class="setup-button" data-drive-track="night">Night</button></div>
-                <div class="setup-row"><strong>Tuning</strong><button class="setup-button" data-upgrade="engine">Engine <span id="engineLevel">0</span> <span class="upgrade-price">(<span id="enginePrice">250</span>¢)</span></button><button class="setup-button" data-upgrade="handling">Handling <span id="handlingLevel">0</span> <span class="upgrade-price">(<span id="handlingPrice">250</span>¢)</span></button><button class="setup-button" data-upgrade="brakes">Brakes <span id="brakesLevel">0</span> <span class="upgrade-price">(<span id="brakesPrice">250</span>¢)</span></button></div>
             </div>
             <section class="game-shell" aria-label="Flop Road driving game">
                 <div class="hud"><span>Score: <b id="driveScore">0</b></span><span>Speed: <b id="driveSpeed">0</b></span><span>Combo: <b id="driveCombo">x1</b></span><span>HP: <b id="driveHp">♥♥♥♥♥</b></span><span>Coins: <b id="driveCoins">0</b>¢</span><span id="driveStatus">One Way</span><button class="fullscreen-button" type="button" aria-label="Toggle Flop Road fullscreen">⛶ Fullscreen</button></div>
@@ -263,20 +261,19 @@
             const road = {left: 165, right: 735, width: 570};
             const images = ['floppfp.png','invader1.png','invader2.png','invader3.png','invader4.png','invader5.png','invader6.png','invader7.png','invader8.png','invader9.png','invader10.png','invader11.png'].map(src => { const image = new Image(); image.src = src; return image; });
             const keys = new Set();
-            let player, traffic, particles, scenery, distance, level, hp, high, state, spawnTimer, roadOffset, shake, lastTime, escapeX, escapeTarget, escapeTimer, gasPhase, gasTimer, nextGas, cameraX, score, combo, comboTimer, timeLeft, bombTimer, currentRoadSpeed, nextTimeCheckpoint;
-            let driveMode = localStorage.getItem('flop-road-mode') || 'oneway', driveTrack = localStorage.getItem('flop-road-track') || 'forest', coins = Number(localStorage.getItem('flop-road-coins') || 0), upgrades = JSON.parse(localStorage.getItem('flop-road-upgrades') || '{"engine":0,"handling":0,"brakes":0}');
+            let player, traffic, particles, scenery, distance, level, hp, high, state, spawnTimer, roadOffset, shake, lastTime, escapeX, escapeTarget, escapeTimer, score, combo, comboTimer, timeLeft, bombTimer, currentRoadSpeed, nextTimeCheckpoint;
+            let driveMode = localStorage.getItem('flop-road-mode') || 'oneway', driveTrack = localStorage.getItem('flop-road-track') || 'forest', coins = Number(localStorage.getItem('flop-road-coins') || 0);
 
             function reset() {
                 player = {x: 414, y: 448, w: 72, h: 118, vx: 0, invulnerable: 1}; traffic = []; particles = [];
                 scenery = Array.from({length: 16}, (_, i) => ({side: i % 2, y: (i * 83) % 650, size: 16 + Math.random() * 15}));
-                distance = 0; score = 0; combo = 1; comboTimer = 0; timeLeft = 60; bombTimer = 45; nextTimeCheckpoint = 1000; currentRoadSpeed = 0; level = 1; hp = 5; high = Number(localStorage.getItem('flop-road-high') || 0); state = 'playing'; spawnTimer = .9; roadOffset = 0; shake = 0; escapeX = 450; escapeTarget = 450; escapeTimer = 3; gasPhase = 'highway'; gasTimer = 0; nextGas = 2800; cameraX = 0;
+                distance = 0; score = 0; combo = 1; comboTimer = 0; timeLeft = 60; bombTimer = 45; nextTimeCheckpoint = 1000; currentRoadSpeed = 0; level = 1; hp = 5; high = Number(localStorage.getItem('flop-road-high') || 0); state = 'playing'; spawnTimer = .9; roadOffset = 0; shake = 0; escapeX = 450; escapeTarget = 450; escapeTimer = 3;
                 ui.restart.classList.remove('show'); ui.pause.textContent = 'Pause'; updateHud(); canvas.focus();
             }
             function updateHud() {
                 ui.score.textContent = Math.floor(score); ui.speed.textContent = `${Math.floor(currentRoadSpeed * .42)} km/h`; ui.combo.textContent = `x${combo.toFixed(1)}`; ui.hp.textContent = `${'♥'.repeat(Math.ceil(hp)) || '0'} ${hp.toFixed(1)}/5`; ui.coins.textContent = Math.floor(coins);
-                const remaining = Math.max(0, Math.ceil(nextGas - distance));
                 const modeStatus = driveMode === 'time' ? `Time ${Math.max(0, timeLeft).toFixed(1)}s` : driveMode === 'bomb' ? `Bomb ${Math.max(0, bombTimer).toFixed(1)}s` : driveMode === 'twoway' && player.x < road.left + road.width / 2 ? 'Wrong side bonus' : driveMode === 'twoway' ? 'Two Way' : 'One Way';
-                ui.status.textContent = gasPhase === 'stopped' ? `Refueling: ${Math.max(0, gasTimer).toFixed(1)}s` : gasPhase === 'onexit' ? 'Flop Fuel' : remaining < 260 ? `Gas ${remaining}m` : modeStatus;
+                ui.status.textContent = modeStatus;
             }
             function carAngle(car) { return car === player ? Math.max(-.12, Math.min(.12, player.vx / 3900)) : car.type === 'bmw' ? Math.max(-.22, Math.min(.22, (car.targetX - car.x) / 250)) : Math.max(-.1, Math.min(.1, (car.targetX - car.x) / 450)); }
             function hitboxCorners(car) {
@@ -291,7 +288,7 @@
             function leavesEscape(x, width) { return x + width < escapeX - 48 || x > escapeX + 48; }
             function spawnCar(playerSpeed) {
                 const roll = Math.random(), type = roll < .06 ? 'bmw' : roll < .105 ? 'semi' : 'forward';
-                const width = type === 'semi' ? 88 : 72, height = type === 'semi' ? 176 : 116;
+                const width = type === 'semi' ? 88 : 72, height = type === 'semi' ? 245 : 116;
                 const worldSpeed = type === 'bmw' ? 345 + Math.random() * 105 : type === 'semi' ? 190 + Math.random() * 65 : type === 'forward' ? 235 + Math.random() * 115 + Math.min(70, level * 4) : 0;
                 const spawnY = worldSpeed > playerSpeed + 20 ? 640 + Math.random() * 100 : -height - 20;
                 const candidates = Array.from({length: 18}, () => randomRoadX(width)).filter(x => leavesEscape(x, width) && !traffic.some(car => Math.abs((car.y + car.h / 2) - (spawnY + height / 2)) < (car.h + height) / 2 + 55 && Math.abs((car.x + car.w / 2) - (x + width / 2)) < (car.w + width) / 2 + 18));
@@ -324,50 +321,20 @@
             }
             function endDrive() { state = 'gameover'; high = Math.max(high, Math.floor(score)); localStorage.setItem('flop-road-high', String(high)); localStorage.setItem('flop-road-coins', String(Math.floor(coins))); ui.restart.classList.add('show'); }
             function togglePause() { if (state === 'playing') state = 'paused'; else if (state === 'paused') state = 'playing'; ui.pause.textContent = state === 'paused' ? 'Resume' : 'Pause'; }
-            function passStation(forceMerge = false) {
-                if (forceMerge) player.x = road.right - player.w - 13;
-                traffic.forEach(car => { if (car.takingExit) { car.targetX = car.returnX; car.changing = true; } });
-                gasPhase = 'passing'; spawnTimer = 1.1;
-            }
-
             function update(dt) {
                 if (panel.hidden || state !== 'playing') return;
                 level = 1 + Math.floor(distance / 700);
-                const throttle = keys.has('Space') ? .22 : keys.has('ArrowUp') || keys.has('KeyW') ? 1.75 : keys.has('ArrowDown') || keys.has('KeyS') ? Math.max(.2, .4 - upgrades.brakes * .035) : 1;
-                const cruiseSpeed = (315 + upgrades.engine * 18 + Math.min(360, level * 28)) * throttle;
-                if (gasPhase === 'highway' && distance >= nextGas - 260) gasPhase = 'approaching';
-                if (gasPhase === 'approaching' && distance >= nextGas - 45) {
-                    gasPhase = 'entering';
-                }
-                if (gasPhase === 'entering') {
-                    if (distance >= nextGas - 18) traffic.forEach(car => { if (!car.takingExit && car.x + car.w / 2 > road.right - road.width / 4) { car.takingExit = true; car.returnX = car.x; car.targetX = Math.min(810, 878 - car.w); car.changing = true; } });
-                    if (player.x > road.right - 12 && distance >= nextGas - 18) gasPhase = 'onexit';
-                    else if (distance > nextGas + 100) passStation();
-                } else if (gasPhase === 'onexit') {
-                    if (distance >= nextGas + 60) { gasPhase = 'stopped'; gasTimer = 3; player.vx = 0; }
-                } else if (gasPhase === 'stopped') {
-                    gasTimer -= dt; player.vx = 0;
-                    if (gasTimer <= 0) { hp = Math.min(5, hp + 1); gasPhase = 'leaving'; updateHud(); }
-                } else if (gasPhase === 'leaving') {
-                    if (distance >= nextGas + 70) traffic.forEach(car => { if (car.takingExit) { car.targetX = car.returnX; car.changing = true; } });
-                    if (distance >= nextGas + 70 && player.x <= road.right - player.w - 13) passStation();
-                    else if (distance >= nextGas + 145) passStation(true);
-                } else if (gasPhase === 'passing' && distance >= nextGas + 170) {
-                    gasPhase = 'highway'; nextGas += 2800;
-                }
-                let roadSpeed = cruiseSpeed;
-                if (gasPhase === 'stopped') roadSpeed = 0;
+                const throttle = keys.has('Space') ? .22 : keys.has('ArrowUp') || keys.has('KeyW') ? 1.75 : keys.has('ArrowDown') || keys.has('KeyS') ? .4 : 1;
+                const cruiseSpeed = (315 + Math.min(360, level * 28)) * throttle;
+                const roadSpeed = cruiseSpeed;
                 currentRoadSpeed = roadSpeed; distance += roadSpeed * dt / 10; score += roadSpeed * dt / 10 * combo * (driveMode === 'twoway' && player.x < road.left + road.width / 2 ? 1.5 : 1); coins += roadSpeed * dt / 1400; roadOffset = (roadOffset + roadSpeed * dt) % 100; player.invulnerable -= dt; shake -= dt;
                 comboTimer -= dt; if (comboTimer <= 0) combo = Math.max(1, combo - dt * .7);
                 if (driveMode === 'time') { timeLeft -= dt; if (distance >= nextTimeCheckpoint) { timeLeft += 12; nextTimeCheckpoint += 1000; } if (timeLeft <= 0) { endDrive(); return; } }
                 if (driveMode === 'bomb') { bombTimer -= dt; if (bombTimer <= 0) { endDrive(); return; } }
                 const steer = (keys.has('ArrowLeft') || keys.has('KeyA') ? -1 : 0) + (keys.has('ArrowRight') || keys.has('KeyD') ? 1 : 0);
-                if (gasPhase !== 'stopped') { player.vx += steer * (2600 + upgrades.handling * 150) * (keys.has('Space') ? 1.35 : 1) * dt; player.vx *= Math.pow(keys.has('Space') ? .94 : .9, dt * 60); player.vx = Math.max(-760 - upgrades.handling * 35, Math.min(760 + upgrades.handling * 35, player.vx)); player.x += player.vx * dt; }
-                const routeOpen = gasPhase === 'entering' || gasPhase === 'onexit' || gasPhase === 'stopped' || gasPhase === 'leaving';
-                const rightLimit = routeOpen ? 878 : road.right - 13;
+                player.vx += steer * 2600 * (keys.has('Space') ? 1.35 : 1) * dt; player.vx *= Math.pow(keys.has('Space') ? .94 : .9, dt * 60); player.vx = Math.max(-760, Math.min(760, player.vx)); player.x += player.vx * dt;
+                const rightLimit = road.right - 13;
                 if (player.x < road.left + 13) { player.x = road.left + 13; player.vx *= -.25; } if (player.x + player.w > rightLimit) { player.x = rightLimit - player.w; player.vx *= -.25; }
-                const cameraTarget = routeOpen ? Math.max(0, Math.min(150, (player.x - 610) * 1.25)) : 0;
-                cameraX += (cameraTarget - cameraX) * Math.min(1, dt * 2.8);
                 escapeTimer -= dt;
                 if (escapeTimer <= 0) {
                     const intervals = traffic.filter(car => car.y < player.y + 70 && car.y + car.h > 40).map(car => ({left: Math.max(road.left + 16, car.x - 12), right: Math.min(road.right - 16, car.x + car.w + 12)})).sort((a, b) => a.left - b.left);
@@ -379,7 +346,7 @@
                 const escapeStep = Math.sign(escapeTarget - escapeX) * Math.min(Math.abs(escapeTarget - escapeX), 42 * dt), nextEscape = escapeX + escapeStep;
                 if (!traffic.some(car => car.y < player.y + 50 && car.x < nextEscape + 52 && car.x + car.w > nextEscape - 52)) escapeX = nextEscape;
                 spawnTimer -= dt;
-                if ((gasPhase === 'highway' || gasPhase === 'approaching' || gasPhase === 'passing') && spawnTimer <= 0) {
+                if (spawnTimer <= 0) {
                     spawnCar(roadSpeed);
                     if (level >= 4 && Math.random() < Math.min(.38, level * .035)) spawnCar(roadSpeed);
                     spawnTimer = Math.max(.22, .92 - level * .055) * (.68 + Math.random() * .48);
@@ -456,45 +423,8 @@
                 ctx.fillStyle = playerCar ? '#eaff70' : '#fff7bc'; ctx.fillRect(car.x + 9, car.y + 7, 14, 6); ctx.fillRect(car.x + car.w - 23, car.y + 7, 14, 6);
                 ctx.fillStyle = '#ff334f'; ctx.fillRect(car.x + 9, car.y + car.h - 13, 14, 6); ctx.fillRect(car.x + car.w - 23, car.y + car.h - 13, 14, 6); ctx.restore();
             }
-            function drawGasStation() {
-                if (gasPhase === 'highway') return;
-                const signY = player.y + (distance - (nextGas - 200)) * 10;
-                const routeY = player.y + (distance - nextGas) * 10;
-                const stationY = routeY - 600;
-                if (signY > -170 && signY < 650) {
-                    ctx.fillStyle = '#a6a9ad'; ctx.fillRect(789, signY + 83, 7, 78); ctx.fillRect(858, signY + 83, 7, 78);
-                    ctx.fillStyle = '#176b43'; roundRect(755, signY, 140, 88, 6); ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.stroke();
-                    ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.font = '500 20px Fredoka, sans-serif'; ctx.fillText('GAS STATION', 825, signY + 29);
-                    ctx.font = '500 17px Fredoka, sans-serif'; ctx.fillText('200 m', 825, signY + 54); ctx.fillText('EXIT  →', 825, signY + 77);
-                }
-                ctx.save();
-                const plazaTop = routeY - 1050, plazaHeight = 1210;
-                ctx.fillStyle = '#d6d2c8'; roundRect(road.right - 3, plazaTop, 330, plazaHeight, 22); ctx.fill();
-                ctx.fillStyle = '#aaa79e'; ctx.fillRect(road.right - 3, plazaTop + 18, 330, plazaHeight - 36);
-                ctx.fillStyle = '#4a4b50'; ctx.fillRect(road.right - 3, plazaTop + 38, 86, plazaHeight - 76);
-                ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.setLineDash([24,22]); ctx.beginPath(); ctx.moveTo(road.right + 40, plazaTop + 55); ctx.lineTo(road.right + 40, plazaTop + plazaHeight - 55); ctx.stroke(); ctx.setLineDash([]);
-                ctx.fillStyle = '#f5f5f0'; for (let y = plazaTop + 95; y < plazaTop + plazaHeight - 70; y += 170) { ctx.beginPath(); ctx.moveTo(road.right + 40, y - 24); ctx.lineTo(road.right + 28, y); ctx.lineTo(road.right + 36, y); ctx.lineTo(road.right + 36, y + 22); ctx.lineTo(road.right + 44, y + 22); ctx.lineTo(road.right + 44, y); ctx.lineTo(road.right + 52, y); ctx.closePath(); ctx.fill(); }
-                if (stationY > -390 && stationY < 720) {
-                    ctx.strokeStyle = '#ece7da'; ctx.lineWidth = 3;
-                    [925, 965, 1005].forEach(x => { ctx.beginPath(); ctx.moveTo(x, stationY - 55); ctx.lineTo(x, stationY + 60); ctx.stroke(); });
-                    ctx.fillStyle = '#738c43'; roundRect(970, stationY - 238, 45, 150, 16); ctx.fill();
-                    [stationY - 215, stationY - 160, stationY - 108].forEach(y => { ctx.fillStyle = '#3f632c'; ctx.beginPath(); ctx.arc(992, y, 14, 0, Math.PI * 2); ctx.fill(); });
-                }
-                if (stationY > -380 && stationY < 650) {
-                    ctx.fillStyle = 'rgba(0,0,0,.3)'; roundRect(880, stationY - 215, 135, 125, 10); ctx.fill();
-                    ctx.fillStyle = '#f4efe2'; roundRect(872, stationY - 225, 138, 120, 8); ctx.fill(); ctx.fillStyle = '#bd2f35'; ctx.fillRect(872, stationY - 225, 138, 30);
-                    ctx.fillStyle = '#fff'; ctx.font = '500 19px Fredoka, sans-serif'; ctx.textAlign = 'center'; ctx.fillText('FLOP FUEL', 941, stationY - 203);
-                    ctx.fillStyle = '#79b9cf'; roundRect(887, stationY - 180, 48, 50, 4); ctx.fill(); ctx.fillStyle = '#3c3028'; roundRect(948, stationY - 182, 42, 77, 4); ctx.fill();
-                    ctx.fillStyle = 'rgba(0,0,0,.28)'; ctx.fillRect(708, stationY - 55, 190, 26); ctx.fillStyle = '#f0e4c7'; roundRect(700, stationY - 65, 198, 24, 5); ctx.fill(); ctx.fillStyle = '#c62f37'; ctx.fillRect(700, stationY - 65, 198, 8);
-                    [737, 810].forEach(x => { ctx.fillStyle = '#ebecef'; roundRect(x, stationY - 41, 38, 70, 5); ctx.fill(); ctx.fillStyle = '#202830'; ctx.fillRect(x + 7, stationY - 30, 24, 19); ctx.fillStyle = '#d23b3b'; ctx.fillRect(x + 11, stationY, 16, 11); ctx.strokeStyle = '#242424'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(x + 38, stationY - 2, 13, -Math.PI / 2, Math.PI / 2); ctx.stroke(); });
-                    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.moveTo(780, stationY + 75); ctx.lineTo(765, stationY + 48); ctx.lineTo(775, stationY + 48); ctx.lineTo(775, stationY + 30); ctx.lineTo(785, stationY + 30); ctx.lineTo(785, stationY + 48); ctx.lineTo(795, stationY + 48); ctx.closePath(); ctx.fill();
-                    const glow = ctx.createRadialGradient(735, stationY - 38, 2, 735, stationY - 38, 50); glow.addColorStop(0, 'rgba(255,245,180,.32)'); glow.addColorStop(1, 'rgba(255,245,180,0)'); ctx.fillStyle = glow; ctx.fillRect(685, stationY - 88, 100, 100);
-                }
-                if (gasPhase === 'stopped') { ctx.fillStyle = '#fff'; ctx.font = '500 22px Fredoka, sans-serif'; ctx.textAlign = 'center'; ctx.fillText(`REFUELING ${Math.max(0, gasTimer).toFixed(1)}s`, 625, 420); }
-                ctx.restore();
-            }
             function render() {
-                const sx = shake > 0 ? (Math.random() - .5) * 12 : 0, sy = shake > 0 ? (Math.random() - .5) * 8 : 0; ctx.save(); ctx.translate(sx - cameraX, sy);
+                const sx = shake > 0 ? (Math.random() - .5) * 12 : 0, sy = shake > 0 ? (Math.random() - .5) * 8 : 0; ctx.save(); ctx.translate(sx, sy);
                 const trackColors = driveTrack === 'desert' ? ['#9a6c32','#d19b4d','#9a6c32'] : driveTrack === 'night' ? ['#071325','#142849','#071325'] : ['#174d2d','#28653b','#174d2d'];
                 const grass = ctx.createLinearGradient(0, 0, 1050, 0); grass.addColorStop(0, trackColors[0]); grass.addColorStop(.5, trackColors[1]); grass.addColorStop(1, trackColors[2]); ctx.fillStyle = grass; ctx.fillRect(-20, -10, 1100, 620);
                 scenery.forEach(item => { const x = item.side ? road.right + 45 + (item.size % 30) : road.left - 70 - (item.size % 24); ctx.fillStyle = '#0a2b18'; ctx.beginPath(); ctx.arc(x + 4, item.y + 5, item.size + 3, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = '#3a9350'; ctx.beginPath(); ctx.arc(x, item.y, item.size, 0, Math.PI * 2); ctx.fill(); });
@@ -504,7 +434,6 @@
                 [1, 2, 3].map(lane => road.left + road.width * lane / 4).forEach(x => { for (let y = -60 + roadOffset; y < 660; y += 100) ctx.fillRect(x - 2.5, y, 5, 45); });
                 if (driveMode === 'twoway') { ctx.fillStyle = '#ffd43b'; ctx.fillRect(road.left + road.width / 2 - 6, 0, 4, 600); ctx.fillRect(road.left + road.width / 2 + 2, 0, 4, 600); }
                 for (let y = -60 + roadOffset; y < 660; y += 100) { ctx.fillStyle = '#fff'; ctx.fillRect(road.left - 11, y, 8, 34); ctx.fillRect(road.right + 3, y, 8, 34); }
-                drawGasStation();
                 traffic.sort((a,b) => a.y - b.y).forEach(car => drawCar(car));
                 ctx.globalAlpha = player.invulnerable > 0 && Math.floor(player.invulnerable * 12) % 2 ? .4 : 1; drawCar(player, true); ctx.globalAlpha = 1;
                 if (driveMode === 'bomb') { ctx.fillStyle = '#1b1b1b'; ctx.beginPath(); ctx.arc(player.x + player.w - 5, player.y + 18, 13, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = '#ff4438'; ctx.lineWidth = 3; ctx.stroke(); }
@@ -517,11 +446,9 @@
             document.querySelectorAll('[data-drive-key]').forEach(button => { const code = button.dataset.driveKey; const press = e => { e.preventDefault(); button.setPointerCapture?.(e.pointerId); keys.add(code); button.classList.add('active'); canvas.focus(); }; const release = e => { e.preventDefault(); keys.delete(code); button.classList.remove('active'); }; button.addEventListener('pointerdown', press); button.addEventListener('pointerup', release); button.addEventListener('pointercancel', release); });
             function updateDriveSetup() {
                 document.querySelectorAll('[data-drive-mode]').forEach(button => button.classList.toggle('active', button.dataset.driveMode === driveMode)); document.querySelectorAll('[data-drive-track]').forEach(button => button.classList.toggle('active', button.dataset.driveTrack === driveTrack));
-                ['engine','handling','brakes'].forEach(name => { const price = 250 * (upgrades[name] + 1); document.getElementById(`${name}Level`).textContent = upgrades[name]; document.getElementById(`${name}Price`).textContent = upgrades[name] >= 5 ? 'MAX' : price; });
             }
             document.querySelectorAll('[data-drive-mode]').forEach(button => button.addEventListener('click', () => { driveMode = button.dataset.driveMode; localStorage.setItem('flop-road-mode', driveMode); updateDriveSetup(); reset(); }));
             document.querySelectorAll('[data-drive-track]').forEach(button => button.addEventListener('click', () => { driveTrack = button.dataset.driveTrack; localStorage.setItem('flop-road-track', driveTrack); updateDriveSetup(); reset(); }));
-            document.querySelectorAll('[data-upgrade]').forEach(button => button.addEventListener('click', () => { const name = button.dataset.upgrade, price = 250 * (upgrades[name] + 1); if (upgrades[name] >= 5 || coins < price) return; coins -= price; upgrades[name]++; localStorage.setItem('flop-road-coins', String(Math.floor(coins))); localStorage.setItem('flop-road-upgrades', JSON.stringify(upgrades)); updateDriveSetup(); updateHud(); }));
             ui.pause.addEventListener('click', togglePause); ui.restart.addEventListener('click', reset); updateDriveSetup(); reset(); requestAnimationFrame(loop);
         })();
 
