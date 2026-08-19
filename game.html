@@ -296,7 +296,7 @@
             function togglePause() { if (state === 'playing') state = 'paused'; else if (state === 'paused') state = 'playing'; ui.pause.textContent = state === 'paused' ? 'Resume' : 'Pause'; }
             function passStation(forceMerge = false) {
                 if (forceMerge) player.x = road.right - player.w - 13;
-                traffic.forEach(car => { if (car.takingExit) { car.targetX = road.right - road.width / 8 - car.w / 2; car.changing = true; } });
+                traffic.forEach(car => { if (car.takingExit) { car.targetX = car.returnX; car.changing = true; } });
                 gasPhase = 'passing'; spawnTimer = 1.1;
             }
 
@@ -310,7 +310,7 @@
                     gasPhase = 'entering';
                 }
                 if (gasPhase === 'entering') {
-                    if (distance >= nextGas - 18) traffic.forEach(car => { if (!car.takingExit && car.x + car.w / 2 > road.right - road.width / 4) { car.takingExit = true; car.targetX = 810; car.changing = true; } });
+                    if (distance >= nextGas - 18) traffic.forEach(car => { if (!car.takingExit && car.x + car.w / 2 > road.right - road.width / 4) { car.takingExit = true; car.returnX = car.x; car.targetX = Math.min(810, 878 - car.w); car.changing = true; } });
                     if (player.x > road.right - 12 && distance >= nextGas - 18) gasPhase = 'onexit';
                     else if (distance > nextGas + 100) passStation();
                 } else if (gasPhase === 'onexit') {
@@ -319,7 +319,7 @@
                     gasTimer -= dt; player.vx = 0;
                     if (gasTimer <= 0) { hp = Math.min(5, hp + 1); gasPhase = 'leaving'; updateHud(); }
                 } else if (gasPhase === 'leaving') {
-                    if (distance >= nextGas + 70) traffic.forEach(car => { if (car.takingExit) { car.targetX = road.right - road.width / 8 - car.w / 2; car.changing = true; } });
+                    if (distance >= nextGas + 70) traffic.forEach(car => { if (car.takingExit) { car.targetX = car.returnX; car.changing = true; } });
                     if (distance >= nextGas + 70 && player.x <= road.right - player.w - 13) passStation();
                     else if (distance >= nextGas + 145) passStation(true);
                 } else if (gasPhase === 'passing' && distance >= nextGas + 170) {
