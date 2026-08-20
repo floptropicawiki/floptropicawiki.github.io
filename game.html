@@ -25,7 +25,6 @@
         .game-heading { margin-bottom: 4px; font-size: 1.55rem; }
         .game-shell { overflow: hidden; border: 2px solid var(--accent); border-radius: 12px; background: #03030b; box-shadow: 0 12px 35px rgba(0,0,0,.35); }
         .hud { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding: 11px 16px; background: #121222; color: #fff; font-weight: 500; }
-        .fullscreen-button { border: 1px solid #56566d; border-radius: 6px; background: #27273b; color: #fff; padding: 3px 9px; font: 500 .85rem 'Fredoka', sans-serif; cursor: pointer; }
         canvas { display: block; width: 100%; height: auto; aspect-ratio: 3 / 2; background: #050510; touch-action: none; }
         .mobile-only, .controls { display: none; }
         .controls { grid-template-columns: repeat(3, 58px) 1fr 88px; gap: 8px; align-items: center; padding: 12px; background: #121222; }
@@ -41,9 +40,6 @@
         .game-actions { text-align: center; margin-top: 18px; }
         .restart { display: none; border: 0; border-radius: 8px; background: var(--accent); color: #111; padding: 11px 20px; font: 500 1rem 'Fredoka', sans-serif; cursor: pointer; }
         .restart.show { display: inline-block; }
-        .game-shell:fullscreen { width: 100vw; height: 100vh; border: 0; border-radius: 0; display: flex; flex-direction: column; background: #03030b; }
-        .game-shell:fullscreen canvas { flex: 1; width: 100%; height: 100%; min-height: 0; object-fit: contain; }
-        .game-shell:fullscreen .hud, .game-shell:fullscreen .controls { flex: none; }
         footer { text-align: center; border-top: 1px solid var(--border); padding: 25px; color: var(--muted); }
         footer a { color: var(--accent); text-decoration: none; }
         @media (hover: none), (pointer: coarse), (max-width: 759px) { .mobile-only { display: block; } .desktop-only { display: none; } .controls.mobile-only { display: grid; } }
@@ -62,7 +58,7 @@
         <p class="instructions desktop-only"><strong>Controls:</strong> Arrow keys or WASD to move · Space to dash · P to pause · Enter to restart</p>
         <p class="instructions mobile-only"><strong>Controls:</strong> Tap or drag inside the battle box to move · Tap Dash to dodge</p>
         <section class="game-shell" aria-label="Flop Boss Fight game">
-            <div class="hud"><span>Score: <b id="score">0</b></span><span>Level: <b id="level">1</b></span><span>Round: <b id="round">1/10</b></span><span>HP: <b id="lives">3</b></span><span>High: <b id="highScore">0</b></span><button class="fullscreen-button" type="button" aria-label="Toggle boss fight fullscreen">⛶ Fullscreen</button></div>
+            <div class="hud"><span>Score: <b id="score">0</b></span><span>Level: <b id="level">1</b></span><span>Round: <b id="round">1/10</b></span><span>HP: <b id="lives">3</b></span><span>High: <b id="highScore">0</b></span></div>
             <canvas id="game" width="900" height="600" tabindex="0" aria-label="Move with keyboard or by dragging on touch screens"></canvas>
             <div class="controls mobile-only boss-touch-controls" aria-label="Boss fight touch controls">
                 <span class="touch-help">Drag in the battle box to move</span>
@@ -82,12 +78,13 @@
             const imageFiles = ['floppfp.png', 'invader1.png', 'invader2.png', 'invader3.png', 'invader4.png', 'invader5.png', 'invader6.png', 'invader7.png', 'invader8.png', 'invader9.png', 'invader10.png', 'invader11.png'];
             const images = imageFiles.map(src => { const image = new Image(); image.src = src; return image; });
             const keys = new Set(), stars = Array.from({length: 90}, () => ({x: Math.random() * 900, y: Math.random() * 600, r: Math.random() * 1.8 + .2}));
-            let player, attacks, particles, level, round, hp, score, highScore, attackTimer, intermission, state, lastTime, touchTarget, touchPointer;
+            const escapeSequence = ['ArrowUp', 'ArrowUp', 'ArrowRight', 'ArrowRight', 'ArrowUp', 'ArrowRight', 'ArrowUp', 'ArrowRight'];
+            let player, attacks, particles, level, round, hp, score, highScore, attackTimer, intermission, state, lastTime, touchTarget, touchPointer, escaped, escapeStep;
 
             function resetGame() {
                 level = 1; hp = 3; score = 0; highScore = Number(localStorage.getItem('flop-boss-high') || 0);
                 player = {x: 423, y: 425, w: 44, h: 44, speed: 255, invulnerable: 1.2, dash: 0, dashCooldown: 0};
-                attacks = []; particles = []; touchTarget = null; touchPointer = null; state = 'playing'; intermission = 0; ui.restart.classList.remove('show'); startLevel(); canvas.focus();
+                attacks = []; particles = []; touchTarget = null; touchPointer = null; escaped = false; escapeStep = 0; state = 'playing'; intermission = 0; ui.restart.classList.remove('show'); startLevel(); canvas.focus();
             }
             function startLevel() { round = 0; attackTimer = 1.6; attacks = []; updateHud(); }
             function updateHud() { ui.score.textContent = Math.floor(score); ui.level.textContent = level; ui.round.textContent = `${Math.max(1, round)}/10`; ui.lives.textContent = '♥'.repeat(hp) || '0'; ui.high.textContent = highScore; }
@@ -137,8 +134,9 @@
                 if (touchTarget) { const tx = touchTarget.x - (player.x + player.w / 2), ty = touchTarget.y - (player.y + player.h / 2), distanceToTouch = Math.hypot(tx, ty); if (distanceToTouch > 5) { dx = tx / distanceToTouch; dy = ty / distanceToTouch; } else { dx = 0; dy = 0; } }
                 if (dx && dy) { dx *= .707; dy *= .707; }
                 const speed = player.speed * (player.dash > 0 ? 2.7 : 1);
-                player.x = Math.max(arena.x + 5, Math.min(arena.x + arena.w - player.w - 5, player.x + dx * speed * dt));
-                player.y = Math.max(arena.y + 5, Math.min(arena.y + arena.h - player.h - 5, player.y + dy * speed * dt));
+                const bounds = escaped ? {left: 5, right: canvas.width - player.w - 5, top: 5, bottom: canvas.height - player.h - 5} : {left: arena.x + 5, right: arena.x + arena.w - player.w - 5, top: arena.y + 5, bottom: arena.y + arena.h - player.h - 5};
+                player.x = Math.max(bounds.left, Math.min(bounds.right, player.x + dx * speed * dt));
+                player.y = Math.max(bounds.top, Math.min(bounds.bottom, player.y + dy * speed * dt));
                 attackTimer -= dt;
                 if (attackTimer <= 0 && round < 10 && attacks.length === 0) {
                     launchPattern();
@@ -194,6 +192,13 @@
             function loop(time) { const dt = Math.min(.033, ((time - lastTime) || 0) / 1000); lastTime = time; update(dt); render(); requestAnimationFrame(loop); }
             window.addEventListener('keydown', event => {
                 if (['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Space'].includes(event.code)) event.preventDefault();
+                if (!escaped && !event.repeat && escapeSequence.includes(event.code)) {
+                    const inTopRight = player.y <= arena.y + 12 && player.x + player.w >= arena.x + arena.w - 12;
+                    if (inTopRight && event.code === escapeSequence[escapeStep]) {
+                        escapeStep++;
+                        if (escapeStep === escapeSequence.length) { escaped = true; escapeStep = 0; burst(player.x + player.w / 2, player.y + player.h / 2, '#b76cff'); }
+                    } else escapeStep = inTopRight && event.code === escapeSequence[0] ? 1 : 0;
+                }
                 if (event.code === 'Space' && !event.repeat) dash(); else if (event.code === 'KeyP' && !event.repeat) togglePause(); else if (event.code === 'Enter' && state === 'gameover') resetGame(); else keys.add(event.code);
             });
             window.addEventListener('keyup', event => keys.delete(event.code));
@@ -213,16 +218,6 @@
             document.getElementById('themeButton').addEventListener('click', () => { const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'; document.documentElement.dataset.theme = next; sessionStorage.setItem('floptropica-theme', next); });
             document.documentElement.dataset.theme = sessionStorage.getItem('floptropica-theme') || 'dark'; resetGame(); requestAnimationFrame(loop);
         })();
-    </script>
-
-        document.querySelectorAll('.fullscreen-button').forEach(button => button.addEventListener('click', async () => {
-            const shell = button.closest('.game-shell');
-            if (document.fullscreenElement === shell) await document.exitFullscreen();
-            else { if (document.fullscreenElement) await document.exitFullscreen(); await shell.requestFullscreen(); }
-        }));
-        document.addEventListener('fullscreenchange', () => {
-            document.querySelectorAll('.fullscreen-button').forEach(button => { button.textContent = document.fullscreenElement === button.closest('.game-shell') ? '✕ Exit' : '⛶ Fullscreen'; });
-        });
     </script>
 </body>
 </html>
