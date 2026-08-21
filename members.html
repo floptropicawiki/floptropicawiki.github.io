@@ -300,6 +300,23 @@
             background: transparent;
         }
 
+        .member-card.conflict {
+            border-color: #f59e0b;
+            background: color-mix(in srgb, #f59e0b 10%, var(--bg-secondary));
+        }
+
+        .conflict-note {
+            display: block;
+            margin-top: 5px;
+            color: #f59e0b;
+            font-size: 0.82em;
+            font-weight: 500;
+        }
+
+        .roster-summary {
+            color: var(--text-secondary);
+        }
+
         .gov-card {
             background: var(--bg-secondary);
             border: 1px solid var(--border);
@@ -539,6 +556,7 @@
             </div>
 
             <h2>Flops</h2>
+            <p class="roster-summary"><strong>Open numbers:</strong> Flop 43, Flop 44, and Flop 48. Orange cards have duplicate number claims.</p>
             <div class="members-list">
                 <div class="member-card"><div class="name">@flop — Flop 1</div></div>
                 <div class="member-card"><div class="name">@flop 2</div></div>
@@ -546,28 +564,28 @@
                 <div class="member-card"><div class="name">@honestly — Junior Mod — Flop 4</div></div>
                 <div class="member-card"><div class="name">@Shorty — Senior Mod — Flop 5</div></div>
                 <div class="member-card"><div class="name">@BestSpark — Flop 6</div></div>
-                <div class="member-card"><div class="name">@Big — Flop 7</div></div>
+                <div class="member-card"><div class="name">@Big flop — Flop 7</div></div>
                 <div class="member-card"><div class="name">@preston — JMod — Flop 8</div></div>
                 <div class="member-card"><div class="name">@flop 9</div></div>
                 <div class="member-card"><div class="name">@c00lkiddtech — Flop 10</div></div>
                 <div class="member-card"><div class="name">@flop 11</div></div>
-                <div class="member-card"><div class="name">@𝙎𝙪𝙢𝙢𝙮 — Flop 12</div></div>
+                <div class="member-card conflict"><div class="name">@𝙎𝙪𝙢𝙢𝙮 — Flop 12<br>@Summy — Flop 12 (alt)<span class="conflict-note">Duplicate number claim</span></div></div>
                 <div class="member-card"><div class="name">@RustyFish — Flop 13</div></div>
                 <div class="member-card"><div class="name">@flop 14</div></div>
                 <div class="member-card"><div class="name">@Riz — Flop 15</div></div>
                 <div class="member-card"><div class="name">@Flop 16 of the Frog Nation</div></div>
                 <div class="member-card"><div class="name">@flop 17</div></div>
-                <div class="member-card vacant"><div class="name">Flop 18 — Missing</div></div>
+                <div class="member-card"><div class="name">@Smudge — Senior Mod — Flop 18</div></div>
                 <div class="member-card"><div class="name">@F♥l♥o♥p ♥1♥9♥ i♥s♥t♥h♥e♥ g♥o♥a♥t</div></div>
                 <div class="member-card"><div class="name">@flop 20 (Bucket)</div></div>
                 <div class="member-card"><div class="name">@flop 21</div></div>
                 <div class="member-card"><div class="name">@flop 22</div></div>
                 <div class="member-card"><div class="name">@flop 23</div></div>
-                <div class="member-card"><div class="name">@JackIsFlop 24</div></div>
+                <div class="member-card conflict"><div class="name">@JackIsFlop — Flop 24<br>@Neferpitou (Val/Lexie) — Flop 24<span class="conflict-note">Duplicate number claim</span></div></div>
                 <div class="member-card"><div class="name">@flop 25</div></div>
-                <div class="member-card vacant"><div class="name">Flop 26 — Missing</div></div>
+                <div class="member-card"><div class="name">@edeth — Flop 26</div></div>
                 <div class="member-card"><div class="name">@Flop 27</div></div>
-                <div class="member-card"><div class="name">@LilyTheREALMoody — Mod — Flop 28</div></div>
+                <div class="member-card conflict"><div class="name">@LilyTheREALMoody — Mod — Flop 28<br>@the REAL flop 28 (simon)<span class="conflict-note">Duplicate number claim</span></div></div>
                 <div class="member-card"><div class="name">@Zane — Yaoimaster — Flop 29</div></div>
                 <div class="member-card"><div class="name">@Flop 30-billbobjoe</div></div>
                 <div class="member-card"><div class="name">@RM@N4789 - flop 31</div></div>
@@ -577,10 +595,10 @@
                 <div class="member-card"><div class="name">@Earth :3 — Flop 35</div></div>
                 <div class="member-card"><div class="name">@unfounded — Flop 36</div></div>
                 <div class="member-card"><div class="name">@NoahBoa — Flop 37</div></div>
-                <div class="member-card"><div class="name">@Stratus — Flop 38</div></div>
+                <div class="member-card"><div class="name">@GT4XSTRATUS — Flop 38</div></div>
                 <div class="member-card"><div class="name">@Eli — Flop 39</div></div>
-                <div class="member-card vacant"><div class="name">Flop 40 — Missing</div></div>
-                <div class="member-card vacant"><div class="name">Flop 41 — Missing</div></div>
+                <div class="member-card"><div class="name">@Titan — Flop 40</div></div>
+                <div class="member-card"><div class="name">@rocko — Flop 41</div></div>
                 <div class="member-card"><div class="name">@gman999 ♦ — Flop 42</div></div>
                 <div class="member-card vacant"><div class="name">Flop 43 — Missing</div></div>
                 <div class="member-card vacant"><div class="name">Flop 44 — Missing</div></div>
@@ -589,6 +607,7 @@
                 <div class="member-card"><div class="name">@Boz0 — Flop 47</div></div>
                 <div class="member-card vacant"><div class="name">Flop 48 — Missing</div></div>
                 <div class="member-card"><div class="name">@Grey — Flop 49</div></div>
+                <div class="member-card"><div class="name">@TripSense — Flop 50</div></div>
             </div>
         </div>
     </main>
