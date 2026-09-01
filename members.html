@@ -277,7 +277,7 @@
 
         .members-list {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
             gap: 10px;
             margin-top: 20px;
         }
@@ -292,6 +292,9 @@
 
         .member-card .name {
             font-size: 1em;
+            line-height: 1.45;
+            overflow-wrap: anywhere;
+            word-break: break-word;
         }
 
         .member-card.vacant {
